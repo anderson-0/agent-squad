@@ -7,21 +7,18 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     gcc \
     postgresql-client \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Poetry
-RUN pip install poetry
+# Install uv
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.cargo/bin:$PATH"
 
 # Copy dependency files
-COPY pyproject.toml poetry.lock* ./
+COPY requirements.txt ./
 
-# Install Python dependencies
-RUN poetry config virtualenvs.create false \
-    && poetry install --no-interaction --no-ansi
-
-# Copy Prisma schema and generate client
-COPY prisma ./prisma
-RUN prisma generate
+# Install Python dependencies with uv
+RUN uv pip install --system -r requirements.txt
 
 # Copy application code
 COPY . .
@@ -30,4 +27,4 @@ COPY . .
 EXPOSE 8000
 
 # Run migrations and start server
-CMD ["sh", "-c", "prisma db push && uvicorn backend.core.app:app --host 0.0.0.0 --port 8000 --reload"]
+CMD ["sh", "-c", "alembic upgrade head && uvicorn backend.core.app:app --host 0.0.0.0 --port 8000 --reload"]

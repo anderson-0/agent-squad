@@ -2,12 +2,14 @@
 
 FastAPI-based backend for Agent Squad - AI-Powered Software Development SaaS.
 
+Uses **async SQLAlchemy with asyncpg** for high-performance database operations.
+
 ## Prerequisites
 
 - Python 3.11+
 - PostgreSQL 15+
 - Redis 7+
-- Poetry (recommended) or pip
+- uv (recommended) or pip
 
 ## Quick Start with Docker
 
@@ -20,9 +22,13 @@ docker-compose up backend postgres redis
 
 ### 1. Install Dependencies
 
-Using Poetry (recommended):
+Using uv (recommended):
 ```bash
-poetry install
+# Install uv if you haven't already
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install dependencies
+uv pip install -r requirements.txt
 ```
 
 Using pip:
@@ -37,28 +43,19 @@ cp .env.example .env
 # Edit .env with your configuration
 ```
 
-### 3. Generate Prisma Client
+### 3. Run Database Migrations
 
 ```bash
-prisma generate
-```
-
-### 4. Run Database Migrations
-
-```bash
-prisma db push
+alembic upgrade head
 ```
 
 ### 5. Start Development Server
 
 ```bash
-# Using Poetry
-poetry run python main.py
-
-# Or directly
+# Using Python directly
 python main.py
 
-# With uvicorn directly
+# Or with uvicorn directly
 uvicorn backend.core.app:app --reload
 ```
 
@@ -101,20 +98,20 @@ backend/
 ## Database Commands
 
 ```bash
-# Generate Prisma client
-prisma generate
-
-# Push schema changes to database
-prisma db push
-
-# Create a migration
-prisma migrate dev --name migration_name
+# Create a new migration (autogenerate from models)
+alembic revision --autogenerate -m "migration_name"
 
 # Apply migrations
-prisma migrate deploy
+alembic upgrade head
 
-# Open Prisma Studio (DB GUI)
-prisma studio
+# Rollback last migration
+alembic downgrade -1
+
+# Show migration history
+alembic history
+
+# View current migration version
+alembic current
 ```
 
 ## Testing
@@ -159,10 +156,12 @@ Key variables:
 
 ## Common Issues
 
-### Prisma Client Not Found
+### Database Migration Issues
 
 ```bash
-prisma generate
+# Reset database and run migrations
+alembic downgrade base
+alembic upgrade head
 ```
 
 ### Database Connection Issues

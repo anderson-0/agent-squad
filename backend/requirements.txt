@@ -4,8 +4,10 @@ uvicorn[standard]==0.24.0
 python-dotenv==1.0.0
 
 # Database & ORM
-prisma==0.11.0
+sqlalchemy[asyncio]==2.0.23
+alembic==1.13.0
 asyncpg==0.29.0
+psycopg2-binary==2.9.9  # For Alembic migrations
 
 # Authentication & Security
 python-jose[cryptography]==3.3.0

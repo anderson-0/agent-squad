@@ -9,6 +9,7 @@ Ensure you have the following installed:
 - **Docker Desktop** (or Docker Engine + Docker Compose)
 - **Node.js** 20+ (for local development without Docker)
 - **Python** 3.11+ (for local development without Docker)
+- **uv** (Python package manager - for local development)
 - **Git**
 
 ## Quick Start with Docker (Recommended)
@@ -83,8 +84,11 @@ docker-compose up postgres redis -d
 ```bash
 cd backend
 
-# Install dependencies with Poetry (recommended)
-poetry install
+# Install uv (if not already installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install dependencies with uv (recommended)
+uv pip install -r requirements.txt
 
 # Or with pip
 pip install -r requirements.txt
@@ -96,11 +100,8 @@ cp .env.example .env
 # Required: DATABASE_URL, REDIS_URL, SECRET_KEY
 # Optional: OPENAI_API_KEY, ANTHROPIC_API_KEY, STRIPE_SECRET_KEY, etc.
 
-# Generate Prisma client
-prisma generate
-
-# Push database schema
-prisma db push
+# Run database migrations
+alembic upgrade head
 
 # Start development server
 python main.py
@@ -184,29 +185,42 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
 
 ## Database Management
 
-### View Database with Prisma Studio
-
-```bash
-cd backend
-prisma studio
-```
-
-Opens a GUI at http://localhost:5555 to browse and edit database records.
-
-### Run Migrations
+### Create and Run Migrations
 
 ```bash
 cd backend
 
-# Create a new migration
-prisma migrate dev --name your_migration_name
+# Create a new migration (autogenerate from model changes)
+alembic revision --autogenerate -m "your_migration_description"
 
-# Apply migrations in production
-prisma migrate deploy
+# Apply migrations
+alembic upgrade head
+
+# Rollback last migration
+alembic downgrade -1
+
+# View migration history
+alembic history
 
 # Reset database (WARNING: deletes all data)
-prisma migrate reset
+alembic downgrade base
+alembic upgrade head
 ```
+
+### View Database
+
+Use any PostgreSQL client:
+- pgAdmin
+- DBeaver
+- TablePlus
+- psql command line
+
+Connection details:
+- Host: localhost
+- Port: 5432
+- Database: agent_squad_dev
+- User: postgres
+- Password: postgres
 
 ### Seed Database (TODO)
 
@@ -302,11 +316,13 @@ docker-compose ps postgres
 docker-compose logs postgres
 ```
 
-### Prisma Client Not Found
+### Migration Errors
 
 ```bash
 cd backend
-prisma generate
+# Reset and rerun migrations
+alembic downgrade base
+alembic upgrade head
 ```
 
 ### Node Modules Issues

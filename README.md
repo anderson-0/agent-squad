@@ -16,7 +16,7 @@ Enable companies to scale their development capacity on-demand by providing AI a
 
 ## 🏗️ Tech Stack
 
-**Backend**: Python + FastAPI + Prisma + PostgreSQL + Redis
+**Backend**: Python + FastAPI + SQLAlchemy (async + asyncpg) + Alembic + PostgreSQL + Redis
 **Frontend**: Next.js 14+ + TypeScript + Tailwind CSS
 **AI**: OpenAI (default), Anthropic, agno-agi/agnoframework
 **Orchestration**: Inngest
@@ -31,6 +31,7 @@ Enable companies to scale their development capacity on-demand by providing AI a
 - Docker & Docker Compose
 - Node.js 20+ (for local development)
 - Python 3.11+ (for local development)
+- uv (for Python package management - optional, but recommended)
 
 ### Start All Services with Docker
 
@@ -64,14 +65,14 @@ Services will be available at:
 ```bash
 cd backend
 
+# Install uv (if not installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
 # Install dependencies
-poetry install  # or: pip install -r requirements.txt
+uv pip install -r requirements.txt  # or: pip install -r requirements.txt
 
-# Generate Prisma client
-prisma generate
-
-# Run migrations
-prisma db push
+# Run database migrations
+alembic upgrade head
 
 # Start server
 python main.py
