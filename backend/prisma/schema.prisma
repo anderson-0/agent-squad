@@ -1,0 +1,311 @@
+// Prisma Schema for Agent Squad
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider             = "prisma-client-py"
+  recursive_type_depth = 5
+}
+
+// ============================================
+// USER MANAGEMENT
+// ============================================
+
+model User {
+  id               String   @id @default(uuid())
+  email            String   @unique
+  name             String
+  passwordHash     String   @map("password_hash")
+  stripeCustomerId String?  @map("stripe_customer_id")
+  planTier         String   @default("starter") @map("plan_tier") // starter, pro, enterprise
+  isActive         Boolean  @default(true) @map("is_active")
+  emailVerified    Boolean  @default(false) @map("email_verified")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  organizations Organization[]
+  squads        Squad[]
+  feedback      Feedback[]
+
+  @@index([email])
+  @@index([stripeCustomerId])
+  @@map("users")
+}
+
+model Organization {
+  id        String   @id @default(uuid())
+  name      String
+  ownerId   String   @map("owner_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  owner  User    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  squads Squad[]
+
+  @@index([ownerId])
+  @@map("organizations")
+}
+
+// ============================================
+// SQUAD MANAGEMENT
+// ============================================
+
+model Squad {
+  id        String   @id @default(uuid())
+  orgId     String?  @map("org_id")
+  userId    String   @map("user_id")
+  name      String
+  status    String   @default("active") // active, paused, archived
+  config    Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization   Organization?    @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  members        SquadMember[]
+  projects       Project[]
+  taskExecutions TaskExecution[]
+  learningInsights LearningInsight[]
+
+  @@index([userId])
+  @@index([orgId])
+  @@index([userId, status])
+  @@map("squads")
+}
+
+model SquadMember {
+  id           String   @id @default(uuid())
+  squadId      String   @map("squad_id")
+  role         String   // project_manager, backend_developer, etc.
+  specialization String? // nodejs_express, python_fastapi, etc.
+  llmProvider  String   @default("openai") @map("llm_provider")
+  llmModel     String   @default("gpt-4") @map("llm_model")
+  systemPrompt String   @db.Text @map("system_prompt")
+  config       Json     @default("{}")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  squad            Squad          @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  sentMessages     AgentMessage[] @relation("SentMessages")
+  receivedMessages AgentMessage[] @relation("ReceivedMessages")
+
+  @@index([squadId])
+  @@index([squadId, role])
+  @@map("squad_members")
+}
+
+// ============================================
+// PROJECT & TASK MANAGEMENT
+// ============================================
+
+model Project {
+  id              String   @id @default(uuid())
+  squadId         String   @map("squad_id")
+  name            String
+  description     String?  @db.Text
+  gitRepoUrl      String?  @map("git_repo_url")
+  gitProvider     String?  @map("git_provider") // github, gitlab, bitbucket
+  ticketSystemUrl String?  @map("ticket_system_url")
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  squad        Squad         @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  tasks        Task[]
+  integrations Integration[]
+
+  @@index([squadId])
+  @@index([squadId, isActive])
+  @@map("projects")
+}
+
+model Task {
+  id          String   @id @default(uuid())
+  projectId   String   @map("project_id")
+  externalId  String?  @map("external_id") // ID from Jira, etc.
+  title       String
+  description String   @db.Text
+  status      String   @default("pending") // pending, in_progress, blocked, completed, failed
+  priority    String   @default("medium") @map("priority") // low, medium, high, urgent
+  assignedTo  String?  @map("assigned_to")
+  metadata    Json     @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  project    Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  executions TaskExecution[]
+
+  @@index([projectId])
+  @@index([projectId, status])
+  @@index([projectId, status, priority])
+  @@index([externalId])
+  @@map("tasks")
+}
+
+model TaskExecution {
+  id          String    @id @default(uuid())
+  taskId      String    @map("task_id")
+  squadId     String    @map("squad_id")
+  status      String    @default("pending") // pending, in_progress, completed, failed, blocked
+  startedAt   DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  logs        Json      @default("[]")
+  errorMessage String?  @db.Text @map("error_message")
+  metadata    Json      @default("{}")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  task     Task           @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  squad    Squad          @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  messages AgentMessage[]
+  feedback Feedback?
+
+  @@index([taskId])
+  @@index([squadId])
+  @@index([squadId, status])
+  @@index([status, createdAt])
+  @@map("task_executions")
+}
+
+// ============================================
+// AGENT COMMUNICATION
+// ============================================
+
+model AgentMessage {
+  id              String   @id @default(uuid())
+  taskExecutionId String   @map("task_execution_id")
+  senderId        String   @map("sender_id")
+  recipientId     String?  @map("recipient_id") // null for broadcast
+  content         String   @db.Text
+  messageType     String   @map("message_type") // task_assignment, question, response, etc.
+  metadata        Json     @default("{}")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  taskExecution TaskExecution @relation(fields: [taskExecutionId], references: [id], onDelete: Cascade)
+  sender        SquadMember   @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient     SquadMember?  @relation("ReceivedMessages", fields: [recipientId], references: [id], onDelete: SetNull)
+
+  @@index([taskExecutionId])
+  @@index([taskExecutionId, createdAt])
+  @@index([senderId])
+  @@index([recipientId])
+  @@map("agent_messages")
+}
+
+// ============================================
+// FEEDBACK & LEARNING
+// ============================================
+
+model Feedback {
+  id              String   @id @default(uuid())
+  taskExecutionId String   @unique @map("task_execution_id")
+  userId          String   @map("user_id")
+  rating          Int      // 1-5
+  comments        String   @db.Text
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  taskExecution TaskExecution @relation(fields: [taskExecutionId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([rating])
+  @@map("feedback")
+}
+
+model LearningInsight {
+  id               String   @id @default(uuid())
+  squadId          String   @map("squad_id")
+  insightText      String   @db.Text @map("insight_text")
+  vectorId         String?  @map("vector_id") // Reference to Pinecone vector
+  sourceFeedbackId String?  @map("source_feedback_id")
+  category         String?  // success, failure, improvement
+  metadata         Json     @default("{}")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  squad Squad @relation(fields: [squadId], references: [id], onDelete: Cascade)
+
+  @@index([squadId])
+  @@index([category])
+  @@map("learning_insights")
+}
+
+// ============================================
+// INTEGRATIONS
+// ============================================
+
+model Integration {
+  id          String   @id @default(uuid())
+  projectId   String   @map("project_id")
+  type        String   // git, jira, slack, etc.
+  provider    String?  // github, gitlab, bitbucket (for git type)
+  credentials String   @db.Text // Encrypted JSON
+  config      Json     @default("{}")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  project  Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  webhooks Webhook[]
+
+  @@index([projectId])
+  @@index([projectId, type])
+  @@map("integrations")
+}
+
+model Webhook {
+  id            String   @id @default(uuid())
+  integrationId String   @map("integration_id")
+  eventType     String   @map("event_type")
+  secret        String
+  url           String
+  isActive      Boolean  @default(true) @map("is_active")
+  lastTriggered DateTime? @map("last_triggered")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  integration Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  @@index([integrationId])
+  @@map("webhooks")
+}
+
+// ============================================
+// BILLING & USAGE
+// ============================================
+
+model Subscription {
+  id               String    @id @default(uuid())
+  userId           String    @map("user_id")
+  stripeSubscriptionId String @unique @map("stripe_subscription_id")
+  stripePriceId    String    @map("stripe_price_id")
+  planTier         String    @map("plan_tier") // starter, pro, enterprise
+  status           String    // active, canceled, past_due, etc.
+  currentPeriodStart DateTime @map("current_period_start")
+  currentPeriodEnd   DateTime @map("current_period_end")
+  cancelAtPeriodEnd  Boolean  @default(false) @map("cancel_at_period_end")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([stripeSubscriptionId])
+  @@map("subscriptions")
+}
+
+model UsageMetrics {
+  id           String   @id @default(uuid())
+  squadId      String   @map("squad_id")
+  metricType   String   @map("metric_type") // task_executions, llm_calls, tokens_used
+  value        Float
+  cost         Float?
+  metadata     Json     @default("{}")
+  recordedAt   DateTime @default(now()) @map("recorded_at")
+
+  @@index([squadId])
+  @@index([squadId, metricType])
+  @@index([recordedAt])
+  @@map("usage_metrics")
+}

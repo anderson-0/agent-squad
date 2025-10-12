@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(for:*)",
+      "Bash(do touch \"$file\")",
+      "Bash(done)",
+      "Bash(docker-compose:*)",
+      "Bash(chmod:*)"
     ],
     "deny": [],
     "ask": []
