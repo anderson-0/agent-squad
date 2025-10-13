@@ -51,7 +51,15 @@ async def create_squad_member(
 
     Returns the created agent.
     """
-    # Verify squad ownership
+    # Check if squad exists first
+    squad = await SquadService.get_squad(db, member_data.squad_id)
+    if not squad:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Squad {member_data.squad_id} not found"
+        )
+
+    # Then verify squad ownership
     await SquadService.verify_squad_ownership(db, member_data.squad_id, current_user.id)
 
     # Validate squad size before adding
@@ -98,7 +106,15 @@ async def list_squad_members(
 
     Returns list of agents in the squad.
     """
-    # Verify squad ownership
+    # Check if squad exists first
+    squad = await SquadService.get_squad(db, squad_id)
+    if not squad:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Squad {squad_id} not found"
+        )
+
+    # Then verify squad ownership
     await SquadService.verify_squad_ownership(db, squad_id, current_user.id)
 
     # Get squad members
@@ -199,7 +215,15 @@ async def get_members_by_role(
 
     Returns list of agents with that role.
     """
-    # Verify squad ownership
+    # Check if squad exists first
+    squad = await SquadService.get_squad(db, squad_id)
+    if not squad:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Squad {squad_id} not found"
+        )
+
+    # Then verify squad ownership
     await SquadService.verify_squad_ownership(db, squad_id, current_user.id)
 
     # Get members by role
@@ -230,7 +254,15 @@ async def get_squad_composition(
 
     Returns breakdown of roles, LLM providers, and models in use.
     """
-    # Verify squad ownership
+    # Check if squad exists first
+    squad = await SquadService.get_squad(db, squad_id)
+    if not squad:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Squad {squad_id} not found"
+        )
+
+    # Then verify squad ownership
     await SquadService.verify_squad_ownership(db, squad_id, current_user.id)
 
     # Get composition

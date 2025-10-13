@@ -267,3 +267,170 @@ async def test_get_squad_with_agents(test_db):
     assert len(squad_details["members"]) == 3
     assert squad_details["member_count"] == 3
     assert squad_details["active_member_count"] == 3
+
+
+@pytest.mark.asyncio
+async def test_create_squad_user_not_found(test_db):
+    """Test creating squad with non-existent user"""
+    invalid_user_id = uuid4()
+
+    with pytest.raises(HTTPException) as exc_info:
+        await SquadService.create_squad(
+            db=test_db,
+            user_id=invalid_user_id,
+            name="Test Squad"
+        )
+
+    assert exc_info.value.status_code == 404
+    assert "not found" in str(exc_info.value.detail).lower()
+
+
+@pytest.mark.asyncio
+async def test_create_squad_inactive_user(test_db):
+    """Test creating squad with inactive user"""
+    # Create inactive user
+    user = User(
+        email="inactive@example.com",
+        name="Inactive User",
+        password_hash="hash",
+        plan_tier="pro",
+        is_active=False
+    )
+    test_db.add(user)
+    await test_db.commit()
+    await test_db.refresh(user)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await SquadService.create_squad(
+            db=test_db,
+            user_id=user.id,
+            name="Test Squad"
+        )
+
+    assert exc_info.value.status_code == 400
+    assert "not active" in str(exc_info.value.detail).lower()
+
+
+@pytest.mark.asyncio
+async def test_update_squad_not_found(test_db):
+    """Test updating non-existent squad"""
+    invalid_squad_id = uuid4()
+
+    with pytest.raises(HTTPException) as exc_info:
+        await SquadService.update_squad(
+            db=test_db,
+            squad_id=invalid_squad_id,
+            name="New Name"
+        )
+
+    assert exc_info.value.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_update_squad_with_config_merge(test_db):
+    """Test updating squad config merges with existing config"""
+    # Create user and squad with initial config
+    user = User(email="test@example.com", name="Test", password_hash="hash", plan_tier="pro")
+    test_db.add(user)
+    await test_db.commit()
+    await test_db.refresh(user)
+
+    squad = await SquadService.create_squad(
+        test_db,
+        user_id=user.id,
+        name="Squad",
+        config={"key1": "value1", "key2": "value2"}
+    )
+
+    # Update with partial config
+    updated = await SquadService.update_squad(
+        db=test_db,
+        squad_id=squad.id,
+        config={"key2": "new_value2", "key3": "value3"}
+    )
+
+    # Should merge configs
+    assert updated.config["key1"] == "value1"  # Preserved
+    assert updated.config["key2"] == "new_value2"  # Updated
+    assert updated.config["key3"] == "value3"  # Added
+
+
+@pytest.mark.asyncio
+async def test_update_squad_status_not_found(test_db):
+    """Test updating status of non-existent squad"""
+    invalid_squad_id = uuid4()
+
+    with pytest.raises(HTTPException) as exc_info:
+        await SquadService.update_squad_status(
+            db=test_db,
+            squad_id=invalid_squad_id,
+            status="paused"
+        )
+
+    assert exc_info.value.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_delete_squad_not_found(test_db):
+    """Test deleting non-existent squad"""
+    invalid_squad_id = uuid4()
+
+    with pytest.raises(HTTPException) as exc_info:
+        await SquadService.delete_squad(test_db, invalid_squad_id)
+
+    assert exc_info.value.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_validate_squad_size_user_not_found(test_db):
+    """Test squad size validation with non-existent user"""
+    invalid_user_id = uuid4()
+    invalid_squad_id = uuid4()
+
+    with pytest.raises(HTTPException) as exc_info:
+        await SquadService.validate_squad_size(
+            db=test_db,
+            squad_id=invalid_squad_id,
+            user_id=invalid_user_id,
+            new_member_count=1
+        )
+
+    assert exc_info.value.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_get_squad_with_agents_not_found(test_db):
+    """Test getting squad with agents for non-existent squad"""
+    invalid_squad_id = uuid4()
+
+    with pytest.raises(HTTPException) as exc_info:
+        await SquadService.get_squad_with_agents(test_db, invalid_squad_id)
+
+    assert exc_info.value.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_calculate_squad_cost_not_found(test_db):
+    """Test calculating cost for non-existent squad"""
+    invalid_squad_id = uuid4()
+
+    with pytest.raises(HTTPException) as exc_info:
+        await SquadService.calculate_squad_cost(test_db, invalid_squad_id)
+
+    assert exc_info.value.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_verify_squad_ownership_not_found(test_db):
+    """Test verifying ownership of non-existent squad"""
+    invalid_squad_id = uuid4()
+    invalid_user_id = uuid4()
+
+    with pytest.raises(HTTPException) as exc_info:
+        await SquadService.verify_squad_ownership(
+            db=test_db,
+            squad_id=invalid_squad_id,
+            user_id=invalid_user_id
+        )
+
+    assert exc_info.value.status_code == 404

@@ -261,3 +261,243 @@ async def test_squad_without_auth(client: AsyncClient):
 
     response = await client.post("/api/v1/squads", json={"name": "Test"})
     assert response.status_code in [401, 403]
+
+
+@pytest.mark.asyncio
+async def test_get_squad_details(client: AsyncClient, test_user_data):
+    """Test getting squad with all agent details"""
+    await client.post("/api/v1/auth/register", json=test_user_data)
+    login_response = await client.post("/api/v1/auth/login", json={
+        "email": test_user_data["email"],
+        "password": test_user_data["password"]
+    })
+    token = login_response.json()["access_token"]
+
+    # Create squad
+    create_response = await client.post(
+        "/api/v1/squads",
+        json={"name": "Test Squad"},
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    squad_id = create_response.json()["id"]
+
+    # Add a squad member
+    await client.post(
+        "/api/v1/squad-members",
+        json={
+            "squad_id": squad_id,
+            "role": "project_manager"
+        },
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    # Get squad details
+    response = await client.get(
+        f"/api/v1/squads/{squad_id}/details",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert "squad" in data
+    assert "members" in data
+    assert data["member_count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_update_squad_status(client: AsyncClient, test_user_data):
+    """Test updating squad status"""
+    await client.post("/api/v1/auth/register", json=test_user_data)
+    login_response = await client.post("/api/v1/auth/login", json={
+        "email": test_user_data["email"],
+        "password": test_user_data["password"]
+    })
+    token = login_response.json()["access_token"]
+
+    # Create squad
+    create_response = await client.post(
+        "/api/v1/squads",
+        json={"name": "Test Squad"},
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    squad_id = create_response.json()["id"]
+
+    # Update status to paused
+    response = await client.patch(
+        f"/api/v1/squads/{squad_id}/status?new_status=paused",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "paused"
+
+
+@pytest.mark.asyncio
+async def test_get_squad_not_found(client: AsyncClient, test_user_data):
+    """Test getting non-existent squad"""
+    from uuid import uuid4
+
+    await client.post("/api/v1/auth/register", json=test_user_data)
+    login_response = await client.post("/api/v1/auth/login", json={
+        "email": test_user_data["email"],
+        "password": test_user_data["password"]
+    })
+    token = login_response.json()["access_token"]
+
+    # Try to get non-existent squad
+    invalid_id = str(uuid4())
+    response = await client.get(
+        f"/api/v1/squads/{invalid_id}",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_list_squads_with_status_filter(client: AsyncClient, test_user_data):
+    """Test listing squads with status filter"""
+    await client.post("/api/v1/auth/register", json=test_user_data)
+    login_response = await client.post("/api/v1/auth/login", json={
+        "email": test_user_data["email"],
+        "password": test_user_data["password"]
+    })
+    token = login_response.json()["access_token"]
+
+    # Create active squad
+    await client.post(
+        "/api/v1/squads",
+        json={"name": "Active Squad"},
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    # Create another squad and pause it
+    create_response = await client.post(
+        "/api/v1/squads",
+        json={"name": "Paused Squad"},
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    squad_id = create_response.json()["id"]
+
+    await client.patch(
+        f"/api/v1/squads/{squad_id}/status?new_status=paused",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    # List only active squads
+    response = await client.get(
+        "/api/v1/squads?status_filter=active",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["status"] == "active"
+
+
+@pytest.mark.asyncio
+async def test_get_squad_details_not_found(client: AsyncClient, test_user_data):
+    """Test getting details of non-existent squad"""
+    from uuid import uuid4
+
+    await client.post("/api/v1/auth/register", json=test_user_data)
+    login_response = await client.post("/api/v1/auth/login", json={
+        "email": test_user_data["email"],
+        "password": test_user_data["password"]
+    })
+    token = login_response.json()["access_token"]
+
+    invalid_id = str(uuid4())
+    response = await client.get(
+        f"/api/v1/squads/{invalid_id}/details",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_get_squad_cost_not_found(client: AsyncClient, test_user_data):
+    """Test getting cost of non-existent squad"""
+    from uuid import uuid4
+
+    await client.post("/api/v1/auth/register", json=test_user_data)
+    login_response = await client.post("/api/v1/auth/login", json={
+        "email": test_user_data["email"],
+        "password": test_user_data["password"]
+    })
+    token = login_response.json()["access_token"]
+
+    invalid_id = str(uuid4())
+    response = await client.get(
+        f"/api/v1/squads/{invalid_id}/cost",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_update_squad_not_found(client: AsyncClient, test_user_data):
+    """Test updating non-existent squad"""
+    from uuid import uuid4
+
+    await client.post("/api/v1/auth/register", json=test_user_data)
+    login_response = await client.post("/api/v1/auth/login", json={
+        "email": test_user_data["email"],
+        "password": test_user_data["password"]
+    })
+    token = login_response.json()["access_token"]
+
+    invalid_id = str(uuid4())
+    response = await client.put(
+        f"/api/v1/squads/{invalid_id}",
+        json={"name": "Updated Name"},
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_update_squad_status_not_found(client: AsyncClient, test_user_data):
+    """Test updating status of non-existent squad"""
+    from uuid import uuid4
+
+    await client.post("/api/v1/auth/register", json=test_user_data)
+    login_response = await client.post("/api/v1/auth/login", json={
+        "email": test_user_data["email"],
+        "password": test_user_data["password"]
+    })
+    token = login_response.json()["access_token"]
+
+    invalid_id = str(uuid4())
+    response = await client.patch(
+        f"/api/v1/squads/{invalid_id}/status?new_status=paused",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_delete_squad_not_found(client: AsyncClient, test_user_data):
+    """Test deleting non-existent squad"""
+    from uuid import uuid4
+
+    await client.post("/api/v1/auth/register", json=test_user_data)
+    login_response = await client.post("/api/v1/auth/login", json={
+        "email": test_user_data["email"],
+        "password": test_user_data["password"]
+    })
+    token = login_response.json()["access_token"]
+
+    invalid_id = str(uuid4())
+    response = await client.delete(
+        f"/api/v1/squads/{invalid_id}",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert response.status_code == 404

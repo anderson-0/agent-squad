@@ -144,17 +144,19 @@ async def get_squad_details(
 
     Returns squad with full agent details.
     """
-    # Verify ownership
-    await SquadService.verify_squad_ownership(db, squad_id, current_user.id)
-
-    # Get squad with agents
-    squad_details = await SquadService.get_squad_with_agents(db, squad_id)
-
-    if not squad_details:
+    # Check if squad exists first
+    squad = await SquadService.get_squad(db, squad_id)
+    if not squad:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Squad {squad_id} not found"
         )
+
+    # Then verify ownership
+    await SquadService.verify_squad_ownership(db, squad_id, current_user.id)
+
+    # Get squad with agents
+    squad_details = await SquadService.get_squad_with_agents(db, squad_id)
 
     return squad_details
 
@@ -177,7 +179,15 @@ async def get_squad_cost(
 
     Returns cost breakdown by LLM model.
     """
-    # Verify ownership
+    # Check if squad exists first
+    squad = await SquadService.get_squad(db, squad_id)
+    if not squad:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Squad {squad_id} not found"
+        )
+
+    # Then verify ownership
     await SquadService.verify_squad_ownership(db, squad_id, current_user.id)
 
     # Calculate cost
@@ -209,7 +219,15 @@ async def update_squad(
 
     Returns updated squad.
     """
-    # Verify ownership
+    # Check if squad exists first
+    squad = await SquadService.get_squad(db, squad_id)
+    if not squad:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Squad {squad_id} not found"
+        )
+
+    # Then verify ownership
     await SquadService.verify_squad_ownership(db, squad_id, current_user.id)
 
     # Update squad
@@ -221,12 +239,6 @@ async def update_squad(
         status=squad_update.status,
         config=squad_update.config,
     )
-
-    if not updated_squad:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Squad {squad_id} not found"
-        )
 
     return updated_squad
 
@@ -251,7 +263,15 @@ async def update_squad_status(
 
     Returns updated squad.
     """
-    # Verify ownership
+    # Check if squad exists first
+    squad = await SquadService.get_squad(db, squad_id)
+    if not squad:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Squad {squad_id} not found"
+        )
+
+    # Then verify ownership
     await SquadService.verify_squad_ownership(db, squad_id, current_user.id)
 
     # Update status
@@ -260,12 +280,6 @@ async def update_squad_status(
         squad_id=squad_id,
         status=new_status,
     )
-
-    if not updated_squad:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Squad {squad_id} not found"
-        )
 
     return updated_squad
 
@@ -293,7 +307,15 @@ async def delete_squad(
 
     This action cannot be undone.
     """
-    # Verify ownership
+    # Check if squad exists first
+    squad = await SquadService.get_squad(db, squad_id)
+    if not squad:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Squad {squad_id} not found"
+        )
+
+    # Then verify ownership
     await SquadService.verify_squad_ownership(db, squad_id, current_user.id)
 
     # Delete squad

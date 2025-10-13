@@ -89,7 +89,7 @@ class MessageBus:
                 recipient_id=recipient_id,
                 content=content,
                 message_type=message_type,
-                metadata=metadata or {},
+                message_metadata=metadata or {},
                 created_at=datetime.utcnow()
             )
 

@@ -35,7 +35,7 @@ async def test_send_message_point_to_point(message_bus):
     assert message.recipient_id == recipient_id
     assert message.content == "Hello, agent!"
     assert message.message_type == "question"
-    assert message.metadata["urgency"] == "high"
+    assert message.message_metadata["urgency"] == "high"
 
 
 @pytest.mark.asyncio

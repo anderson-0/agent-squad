@@ -11,7 +11,7 @@ class AgentMessageBase(BaseModel):
     """Base agent message schema"""
     content: str = Field(..., description="Message content")
     message_type: str = Field(..., description="Type of message")
-    metadata: Optional[Dict[str, Any]] = Field(default=None, description="Additional metadata")
+    message_metadata: Optional[Dict[str, Any]] = Field(default=None, description="Additional metadata")
 
 
 class AgentMessageCreate(AgentMessageBase):
@@ -19,7 +19,6 @@ class AgentMessageCreate(AgentMessageBase):
     task_execution_id: Optional[UUID] = None
     sender_id: UUID
     recipient_id: Optional[UUID] = Field(default=None, description="None for broadcast messages")
-    message_metadata: Optional[Dict[str, Any]] = Field(default=None, description="Additional metadata")
 
 
 class AgentMessageResponse(AgentMessageBase):

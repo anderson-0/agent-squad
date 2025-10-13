@@ -7,7 +7,8 @@ Handles squad creation, validation, member management, and cost calculation.
 from typing import List, Optional, Dict, Any
 from uuid import UUID
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException
+from fastapi import status as http_status
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -61,13 +62,13 @@ class SquadService:
 
         if not user:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
+                status_code=http_status.HTTP_404_NOT_FOUND,
                 detail=f"User {user_id} not found"
             )
 
         if not user.is_active:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=http_status.HTTP_400_BAD_REQUEST,
                 detail="User account is not active"
             )
 
@@ -174,7 +175,7 @@ class SquadService:
 
         if not squad:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
+                status_code=http_status.HTTP_404_NOT_FOUND,
                 detail=f"Squad {squad_id} not found"
             )
 
@@ -188,7 +189,7 @@ class SquadService:
             valid_statuses = ["active", "paused", "archived"]
             if status not in valid_statuses:
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
+                    status_code=http_status.HTTP_400_BAD_REQUEST,
                     detail=f"Invalid status: {status}. Valid: {', '.join(valid_statuses)}"
                 )
             squad.status = status
@@ -227,7 +228,7 @@ class SquadService:
 
         if status not in valid_statuses:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=http_status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid status: {status}. Valid: {', '.join(valid_statuses)}"
             )
 
@@ -235,7 +236,7 @@ class SquadService:
 
         if not squad:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
+                status_code=http_status.HTTP_404_NOT_FOUND,
                 detail=f"Squad {squad_id} not found"
             )
 
@@ -266,7 +267,7 @@ class SquadService:
 
         if not squad:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
+                status_code=http_status.HTTP_404_NOT_FOUND,
                 detail=f"Squad {squad_id} not found"
             )
 
@@ -303,7 +304,7 @@ class SquadService:
 
         if not user:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
+                status_code=http_status.HTTP_404_NOT_FOUND,
                 detail=f"User {user_id} not found"
             )
 
@@ -322,7 +323,7 @@ class SquadService:
 
         if current_count + new_member_count > limit:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=http_status.HTTP_400_BAD_REQUEST,
                 detail=f"Squad size limit reached. {user.plan_tier} plan allows max {limit} agents. "
                        f"Current: {current_count}, Attempting to add: {new_member_count}"
             )
@@ -351,7 +352,7 @@ class SquadService:
 
         if not squad:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
+                status_code=http_status.HTTP_404_NOT_FOUND,
                 detail=f"Squad {squad_id} not found"
             )
 
@@ -410,7 +411,7 @@ class SquadService:
 
         if not squad:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
+                status_code=http_status.HTTP_404_NOT_FOUND,
                 detail=f"Squad {squad_id} not found"
             )
 
@@ -483,13 +484,13 @@ class SquadService:
 
         if not squad:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
+                status_code=http_status.HTTP_404_NOT_FOUND,
                 detail=f"Squad {squad_id} not found"
             )
 
         if squad.user_id != user_id:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
+                status_code=http_status.HTTP_403_FORBIDDEN,
                 detail="You don't have permission to access this squad"
             )
 
