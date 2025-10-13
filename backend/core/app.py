@@ -11,7 +11,7 @@ from prometheus_client import make_asgi_app
 from backend.core.config import settings
 from backend.core.logging import setup_logging
 from backend.core.database import init_db, close_db
-# from backend.api.v1.router import api_router
+from backend.api.v1.router import api_router
 
 
 @asynccontextmanager
@@ -43,7 +43,7 @@ app = FastAPI(
 # CORS Middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_origins=settings.get_allowed_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -83,5 +83,5 @@ async def root():
     }
 
 
-# Include API router (uncomment when routes are created)
-# app.include_router(api_router, prefix=settings.API_V1_PREFIX)
+# Include API router
+app.include_router(api_router, prefix=settings.API_V1_PREFIX)

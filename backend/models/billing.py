@@ -26,7 +26,7 @@ class Subscription(Base, TimestampMixin):
 
     __table_args__ = (
         Index("ix_subscriptions_user_id", "user_id"),
-        Index("ix_subscriptions_stripe_subscription_id", "stripe_subscription_id"),
+        # stripe_subscription_id already has index due to unique=True
     )
 
 
@@ -40,7 +40,7 @@ class UsageMetrics(Base):
     metric_type = Column(String, nullable=False)  # task_executions, llm_calls, tokens_used
     value = Column(Float, nullable=False)
     cost = Column(Float, nullable=True)
-    metadata = Column(JSON, nullable=False, server_default="{}")
+    usage_metadata = Column(JSON, nullable=False, server_default="{}")
     recorded_at = Column(DateTime, nullable=False, server_default=func.now())
 
     __table_args__ = (

@@ -12,7 +12,8 @@ RUN apt-get update && apt-get install -y \
 
 # Install uv
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-ENV PATH="/root/.cargo/bin:$PATH"
+ENV PATH="/root/.local/bin:$PATH"
+ENV PYTHONPATH=/app
 
 # Copy dependency files
 COPY requirements.txt ./
@@ -27,4 +28,4 @@ COPY . .
 EXPOSE 8000
 
 # Run migrations and start server
-CMD ["sh", "-c", "alembic upgrade head && uvicorn backend.core.app:app --host 0.0.0.0 --port 8000 --reload"]
+CMD ["sh", "-c", "alembic upgrade head && uvicorn core.app:app --host 0.0.0.0 --port 8000 --reload"]

@@ -45,18 +45,20 @@ services:
       DEBUG: "true"
       HOST: 0.0.0.0
       PORT: "8000"
+      PYTHONPATH: /workspace
       ALLOWED_ORIGINS: http://localhost:3000,http://localhost:8000
     ports:
       - "8000:8000"
     volumes:
-      - ./backend:/app
-      - /app/__pycache__
+      - .:/workspace
+      - /workspace/backend/__pycache__
+    working_dir: /workspace/backend
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: uvicorn backend.core.app:app --host 0.0.0.0 --port 8000 --reload
+    command: sh -c "alembic upgrade head && uvicorn backend.core.app:app --host 0.0.0.0 --port 8000 --reload"
 
   # Frontend Next.js App
   frontend:

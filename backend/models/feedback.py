@@ -45,7 +45,7 @@ class LearningInsight(Base):
     vector_id = Column(String, nullable=True)  # Reference to Pinecone vector
     source_feedback_id = Column(String, nullable=True)
     category = Column(String, nullable=True)  # success, failure, improvement
-    metadata = Column(JSON, nullable=False, server_default="{}")
+    insight_metadata = Column(JSON, nullable=False, server_default="{}")
     created_at = Column(DateTime, nullable=False, server_default=func.now())
 
     # Relationships

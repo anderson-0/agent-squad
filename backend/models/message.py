@@ -25,7 +25,7 @@ class AgentMessage(Base):
     )  # null for broadcast
     content = Column(Text, nullable=False)
     message_type = Column(String, nullable=False)  # task_assignment, question, response, etc.
-    metadata = Column(JSON, nullable=False, server_default="{}")
+    message_metadata = Column(JSON, nullable=False, server_default="{}")
     created_at = Column(DateTime, nullable=False, server_default=func.now())
 
     # Relationships

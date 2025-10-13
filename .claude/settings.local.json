@@ -6,7 +6,13 @@
       "Bash(do touch \"$file\")",
       "Bash(done)",
       "Bash(docker-compose:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(alembic upgrade:*)",
+      "Bash(docker exec:*)",
+      "Bash(curl:*)",
+      "Bash(python -m pytest tests/test_security.py -v)",
+      "Bash(docker ps:*)",
+      "Bash(python3:*)"
     ],
     "deny": [],
     "ask": []

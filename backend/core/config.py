@@ -3,7 +3,7 @@ Configuration management using Pydantic Settings
 """
 from typing import List
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field, validator
+from pydantic import Field, field_validator
 
 
 class Settings(BaseSettings):
@@ -59,13 +59,13 @@ class Settings(BaseSettings):
     INNGEST_SIGNING_KEY: str = Field(default="", env="INNGEST_SIGNING_KEY")
 
     # CORS
-    ALLOWED_ORIGINS: List[str] = ["http://localhost:3000"]
+    ALLOWED_ORIGINS: str = "http://localhost:3000"
 
-    @validator("ALLOWED_ORIGINS", pre=True)
-    def parse_cors_origins(cls, v):
-        if isinstance(v, str):
-            return [origin.strip() for origin in v.split(",")]
-        return v
+    def get_allowed_origins(self) -> List[str]:
+        """Parse ALLOWED_ORIGINS string into list"""
+        if isinstance(self.ALLOWED_ORIGINS, str):
+            return [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",")]
+        return self.ALLOWED_ORIGINS if isinstance(self.ALLOWED_ORIGINS, list) else [self.ALLOWED_ORIGINS]
 
     # MCP Servers
     MCP_GIT_SERVER_URL: str = "http://localhost:5001"

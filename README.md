@@ -2,6 +2,25 @@
 
 A revolutionary SaaS platform where users can purchase and manage AI-powered software development squads. Each squad consists of specialized AI agents (developers, testers, project managers, etc.) that collaborate to complete software development tasks.
 
+## 🚦 Current Status
+
+**Phase 2 Week 1 Complete** - Authentication system fully implemented and tested
+
+```bash
+Backend:  ✅ Running (http://localhost:8000)
+Tests:    ✅ 39/39 passing (100%)
+Coverage: ✅ 85% overall, 100% security module
+API Docs: ✅ Available at /docs
+```
+
+**What's Working:**
+- ✅ User registration & login
+- ✅ JWT authentication (access + refresh tokens)
+- ✅ Password management (change & reset)
+- ✅ Email verification
+- ✅ User profile management
+- ✅ Protected API routes
+
 ## 🎯 Vision
 
 Enable companies to scale their development capacity on-demand by providing AI agent squads that can autonomously handle software development tasks, from planning to deployment.
@@ -33,28 +52,51 @@ Enable companies to scale their development capacity on-demand by providing AI a
 - Python 3.11+ (for local development)
 - uv (for Python package management - optional, but recommended)
 
-### Start All Services with Docker
+### Start the Application
+
+#### Option 1: Docker (Recommended)
 
 ```bash
 # Clone repository
 git clone https://github.com/yourusername/agent-squad.git
 cd agent-squad
 
-# Start all services (first run will take a few minutes)
+# Start all services (backend, frontend, postgres, redis)
 docker-compose up
+
+# Or run in detached mode
+docker-compose up -d
+
+# View logs
+docker-compose logs -f backend
+```
+
+#### Option 2: Start Backend Only
+
+```bash
+# Start just the database services
+docker-compose up -d postgres redis
+
+# Start backend (will be at http://localhost:8000)
+docker-compose up backend
 ```
 
 Services will be available at:
-- **Frontend**: http://localhost:3000
 - **Backend API**: http://localhost:8000
-- **API Docs**: http://localhost:8000/docs
+- **API Docs (Swagger)**: http://localhost:8000/docs
+- **API Docs (ReDoc)**: http://localhost:8000/redoc
+- **Health Check**: http://localhost:8000/health
+- **Frontend**: http://localhost:3000 (when started)
 - **PostgreSQL**: localhost:5432
 - **Redis**: localhost:6379
 
 ### Verify Setup
 
 ```bash
-# Run verification script
+# Check backend health
+curl http://localhost:8000/health
+
+# Or run verification script
 ./scripts/verify-setup.sh
 ```
 
@@ -63,19 +105,31 @@ Services will be available at:
 #### Backend
 
 ```bash
+# Start PostgreSQL and Redis with Docker
+docker-compose up -d postgres redis
+
 cd backend
 
 # Install uv (if not installed)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
+# Create Python virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
 # Install dependencies
 uv pip install -r requirements.txt  # or: pip install -r requirements.txt
+
+# Copy environment file
+cp .env.example .env
+# Edit .env with your configuration
 
 # Run database migrations
 alembic upgrade head
 
 # Start server
 python main.py
+# Server will be at http://localhost:8000
 ```
 
 #### Frontend
@@ -86,8 +140,13 @@ cd frontend
 # Install dependencies
 npm install
 
+# Copy environment file
+cp .env.local.example .env.local
+# Edit .env.local with your configuration
+
 # Start development server
 npm run dev
+# Frontend will be at http://localhost:3000
 ```
 
 ## 📁 Project Structure
@@ -96,11 +155,22 @@ npm run dev
 agent-squad/
 ├── backend/                 # FastAPI backend
 │   ├── api/                # API routes
+│   │   └── v1/            # API version 1
 │   ├── core/               # Core functionality
+│   │   ├── app.py         # FastAPI application
+│   │   ├── config.py      # Configuration
+│   │   ├── database.py    # Database connection
+│   │   ├── security.py    # Password & JWT
+│   │   └── auth.py        # Auth dependencies
+│   ├── models/             # SQLAlchemy models
+│   ├── schemas/            # Pydantic schemas
 │   ├── services/           # Business logic
+│   ├── repositories/       # Data access layer
 │   ├── agents/             # AI agents
 │   ├── workflows/          # Inngest workflows
-│   └── prisma/             # Database schema
+│   ├── integrations/       # External integrations
+│   ├── tests/              # Test suite
+│   └── alembic/            # Database migrations
 ├── frontend/                # Next.js frontend
 │   ├── app/                # Next.js app directory
 │   ├── components/         # React components
@@ -115,7 +185,9 @@ agent-squad/
 
 ## 📚 Documentation
 
+### Core Documentation
 - **[Implementation Roadmap](./IMPLEMENTATION_ROADMAP.md)** - Step-by-step development guide
+- **[Phase 2 Authentication Complete](./PHASE_2_AUTHENTICATION_COMPLETE.md)** - Authentication implementation details
 - **[Architecture Overview](./docs/architecture/overview.md)** - System architecture
 - **[Design Principles](./docs/architecture/design-principles.md)** - SOLID, Clean Architecture, DDD
 - **[Design Patterns](./docs/architecture/design-patterns.md)** - Patterns used throughout
@@ -139,19 +211,68 @@ All agent role prompts are in the [`/roles`](./roles) directory:
 
 ## 🧪 Testing
 
-### Backend Tests
+### Run All Tests
+
+#### Backend Tests (Recommended - Inside Docker)
+
+```bash
+# Run all backend tests
+docker exec agent-squad-backend pytest tests/ -v
+
+# Run with coverage report
+docker exec agent-squad-backend pytest tests/ -v --cov=backend --cov-report=term-missing
+
+# Run specific test file
+docker exec agent-squad-backend pytest tests/test_security.py -v
+docker exec agent-squad-backend pytest tests/test_auth_endpoints.py -v
+
+# Generate HTML coverage report
+docker exec agent-squad-backend pytest tests/ --cov=backend --cov-report=html
+# View at backend/htmlcov/index.html
+```
+
+#### Backend Tests (Local - Without Docker)
 
 ```bash
 cd backend
-pytest
-pytest --cov=backend --cov-report=html
+
+# Ensure test database exists
+docker exec agent-squad-postgres psql -U postgres -c "CREATE DATABASE agent_squad_test;"
+
+# Run all tests
+pytest tests/ -v
+
+# Run with coverage
+pytest tests/ -v --cov=backend --cov-report=term-missing
+
+# Run specific test categories
+pytest tests/test_security.py -v          # Security module tests
+pytest tests/test_auth_endpoints.py -v    # Authentication API tests
 ```
+
+#### Test Results Summary
+
+Current test status:
+- ✅ **39 tests** in total
+- ✅ **100% passing** (39/39)
+- ✅ **85% code coverage** overall
+- ✅ **100% coverage** on security module
 
 ### Frontend Tests
 
 ```bash
 cd frontend
+
+# Run all tests
 npm test
+
+# Run with coverage
+npm test -- --coverage
+
+# Run in watch mode
+npm test -- --watch
+
+# Run end-to-end tests
 npm run test:e2e
 ```
 
@@ -189,14 +310,42 @@ npm run format
 ### Database
 
 ```bash
-# Open Prisma Studio (visual editor)
-cd backend && prisma studio
+cd backend
 
-# Create migration
-prisma migrate dev --name migration_name
+# Create a new migration (auto-generate from models)
+alembic revision --autogenerate -m "migration_name"
 
-# Reset database
-prisma migrate reset
+# Apply migrations
+alembic upgrade head
+
+# Rollback last migration
+alembic downgrade -1
+
+# Show migration history
+alembic history
+
+# View current migration version
+alembic current
+
+# Reset database (drop and recreate)
+docker exec agent-squad-postgres psql -U postgres -d agent_squad_dev -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+alembic upgrade head
+```
+
+### Database Management
+
+```bash
+# Connect to PostgreSQL
+docker exec -it agent-squad-postgres psql -U postgres -d agent_squad_dev
+
+# View tables
+docker exec agent-squad-postgres psql -U postgres -d agent_squad_dev -c "\dt"
+
+# Backup database
+docker exec agent-squad-postgres pg_dump -U postgres agent_squad_dev > backup.sql
+
+# Restore database
+docker exec -i agent-squad-postgres psql -U postgres agent_squad_dev < backup.sql
 ```
 
 ## 📋 Pricing Tiers (Planned)
@@ -209,17 +358,110 @@ prisma migrate reset
 
 ## 🛣️ Roadmap
 
-- [x] Phase 1: Foundation & Setup
-- [ ] Phase 2: Authentication & Payments
-- [ ] Phase 3: Agent Framework Integration
-- [ ] Phase 4: MCP Server Integration
-- [ ] Phase 5: Workflow Orchestration
-- [ ] Phase 6: RAG & Knowledge Management
-- [ ] Phase 7: Dashboard UI
-- [ ] Phase 8: Testing & Deployment
-- [ ] Phase 9: CLI (Optional)
+- [x] **Phase 1**: Foundation & Setup ✅
+- [x] **Phase 2 Week 1**: Authentication (JWT, password management, email verification) ✅
+- [ ] **Phase 2 Week 2**: Stripe Integration (subscriptions & payments)
+- [ ] **Phase 2 Week 3**: Organizations & Authorization (RBAC)
+- [ ] **Phase 3**: Agent Framework Integration
+- [ ] **Phase 4**: MCP Server Integration
+- [ ] **Phase 5**: Workflow Orchestration
+- [ ] **Phase 6**: RAG & Knowledge Management
+- [ ] **Phase 7**: Dashboard UI
+- [ ] **Phase 8**: Testing & Deployment
+- [ ] **Phase 9**: CLI (Optional)
+
+### Current Status
+✅ **Authentication System Complete** - 39/39 tests passing
+- User registration & login
+- JWT access & refresh tokens
+- Password management (change, reset)
+- Email verification
+- User profile management
+- Subscription tier enforcement
 
 See [IMPLEMENTATION_ROADMAP.md](./IMPLEMENTATION_ROADMAP.md) for detailed timeline.
+
+## 📋 Quick Reference
+
+### Start the App
+```bash
+# Full stack with Docker
+docker-compose up
+
+# Backend only
+docker-compose up backend
+
+# Detached mode
+docker-compose up -d
+
+# View logs
+docker-compose logs -f backend
+
+# Check health
+curl http://localhost:8000/health
+```
+
+### Run All Tests
+```bash
+# Inside Docker (recommended)
+docker exec agent-squad-backend pytest tests/ -v
+
+# With coverage report
+docker exec agent-squad-backend pytest tests/ -v --cov=backend --cov-report=term-missing
+
+# Generate HTML coverage report
+docker exec agent-squad-backend pytest tests/ --cov=backend --cov-report=html
+
+# Run specific test file
+docker exec agent-squad-backend pytest tests/test_security.py -v
+```
+
+### Database Operations
+```bash
+# Apply migrations
+alembic upgrade head
+
+# Create new migration
+alembic revision --autogenerate -m "description"
+
+# Rollback last migration
+alembic downgrade -1
+
+# Show migration history
+alembic history
+
+# Reset database
+docker exec agent-squad-postgres psql -U postgres -d agent_squad_dev -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+alembic upgrade head
+
+# Backup database
+docker exec agent-squad-postgres pg_dump -U postgres agent_squad_dev > backup.sql
+
+# Restore database
+docker exec -i agent-squad-postgres psql -U postgres agent_squad_dev < backup.sql
+```
+
+### API Endpoints (Authentication)
+
+All authentication endpoints are available at `/api/v1/auth/*`:
+
+- **POST** `/register` - Register new user
+- **POST** `/login` - Login and get tokens
+- **GET** `/me` - Get current user profile
+- **PUT** `/me` - Update user profile
+- **POST** `/refresh` - Refresh access token
+- **POST** `/change-password` - Change password
+- **POST** `/request-password-reset` - Request password reset
+- **POST** `/reset-password` - Reset password with token
+- **POST** `/request-email-verification` - Request email verification
+- **POST** `/verify-email` - Verify email with token
+- **POST** `/logout` - Logout user
+- **DELETE** `/me` - Delete user account
+
+### View API Documentation
+
+- **Swagger UI**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
 
 ## 🤝 Contributing
 

@@ -47,7 +47,7 @@ class Task(Base, TimestampMixin):
     status = Column(String, nullable=False, default="pending")  # pending, in_progress, blocked, completed, failed
     priority = Column(String, nullable=False, default="medium")  # low, medium, high, urgent
     assigned_to = Column(String, nullable=True)
-    metadata = Column(JSON, nullable=False, server_default="{}")
+    task_metadata = Column(JSON, nullable=False, server_default="{}")
 
     # Relationships
     project = relationship("Project", back_populates="tasks")
@@ -57,7 +57,7 @@ class Task(Base, TimestampMixin):
         Index("ix_tasks_project_id", "project_id"),
         Index("ix_tasks_project_id_status", "project_id", "status"),
         Index("ix_tasks_project_id_status_priority", "project_id", "status", "priority"),
-        Index("ix_tasks_external_id", "external_id"),
+        # external_id already has index due to index=True
     )
 
 
@@ -74,7 +74,7 @@ class TaskExecution(Base, TimestampMixin):
     completed_at = Column(DateTime, nullable=True)
     logs = Column(JSON, nullable=False, server_default="[]")
     error_message = Column(Text, nullable=True)
-    metadata = Column(JSON, nullable=False, server_default="{}")
+    execution_metadata = Column(JSON, nullable=False, server_default="{}")
 
     # Relationships
     task = relationship("Task", back_populates="executions")
