@@ -170,31 +170,58 @@
 - Specialized agents (PM, Developers, Testers, etc.)
 - A2A Protocol for inter-agent communication
 - Message bus for routing messages
+- Context manager with RAG integration
+- PM + Tech Lead collaboration system
 
-**Technology**: agno-agi/agnoframework + Custom implementation
+**Technology**: Custom implementation with OpenAI/Anthropic/Groq
 
-**Agent Types**:
-- Project Manager
-- Backend/Frontend Developers
-- QA Testers
-- Tech Leads
-- Solution Architects
-- DevOps Engineers
-- AI Engineers
-- Designers
+**Agent Types** (9 specialized):
+- **Project Manager**: Webhook handling, ticket review, effort estimation, delegation
+- **Tech Lead**: Code review, complexity analysis, architecture decisions
+- **Backend Developers**: Python (FastAPI, Django), Node.js (Express, NestJS)
+- **Frontend Developers**: React + Next.js
+- **QA Testers**: Testing and verification
+- **Solution Architects**: System design and architecture
+- **DevOps Engineers**: Infrastructure and deployment
+- **AI Engineers**: ML/AI features
+- **UI/UX Designers**: Design and user experience
+
+**Key Features**:
+- Multi-LLM provider support (OpenAI, Anthropic, Groq)
+- Structured A2A protocol (10 message types)
+- PM + TL collaboration on ticket review
+- Effort and complexity estimation
+- Conversation history management
+- Real-time message streaming
 
 ### 6. Intelligence Layer
 **Purpose**: AI/ML capabilities
 
 **Components**:
-- **LLM Providers**: OpenAI, Anthropic, etc.
-- **RAG System**: Knowledge retrieval from documents
+- **LLM Providers**: OpenAI, Anthropic, Groq
+- **RAG System**: Unified knowledge retrieval (Pinecone with namespaces)
 - **Learning System**: Feedback processing and improvement
 
 **Technology**:
-- OpenAI API (default)
-- Pinecone (vector database)
+- OpenAI API, Anthropic Claude, Groq
+- Pinecone (vector database with namespaces)
 - Custom learning pipeline
+
+**RAG Strategy** (Unified Knowledge Base):
+```
+Pinecone Index with Namespaces:
+├── {squad_id}:code          # Code from Git repositories
+├── {squad_id}:tickets       # Jira tickets & resolutions
+├── {squad_id}:docs          # Confluence, Notion, Google Docs
+├── {squad_id}:conversations # Past agent discussions
+└── {squad_id}:decisions     # Architecture Decision Records
+```
+
+**Benefits**:
+- Single query retrieves relevant context from all sources
+- Cross-reference capabilities (tickets + code + docs)
+- Squad-isolated namespaces for security
+- Metadata tagging for precise filtering
 
 ### 7. Data Layer
 **Purpose**: Persistent storage
@@ -215,14 +242,30 @@
 **Purpose**: External system integrations
 
 **Components**:
-- **MCP Servers**: Git and Jira operations
+- **MCP Servers**: Git, Jira, knowledge bases (Phase 4)
 - **Stripe**: Payment processing
-- **Webhooks**: External event receivers
+- **Webhooks**: External event receivers (via Inngest)
 
 **Integrations**:
-- GitHub, GitLab, Bitbucket (via MCP)
-- Jira (via MCP)
-- Stripe (payments)
+- **Jira**: Webhooks via Inngest, API access (MVP focus)
+- **ClickUp**: Future support
+- **Git**: GitHub, GitLab, Bitbucket (via MCP - Phase 4)
+- **Knowledge Bases**: Confluence, Notion, Google Docs (via MCP - Phase 4)
+- **Stripe**: Payment and subscription management
+
+**MCP Servers** (Phase 4 from https://smithery.ai/):
+- `@modelcontextprotocol/server-github` - GitHub access
+- `@modelcontextprotocol/server-git` - Git operations
+- `@modelcontextprotocol/server-filesystem` - File access
+- Custom: `jira-mcp-server`, `confluence-mcp-server`, `notion-mcp-server`, `gdocs-mcp-server`
+
+**Webhook Flow** (Inngest):
+```
+Jira Webhook → API Endpoint → Inngest Event → Workflow
+  ├── issue_created → squad/ticket.created → PM reviews
+  ├── issue_updated → squad/ticket.updated → PM updates
+  └── issue_commented → squad/ticket.commented → PM notifies
+```
 
 ## Architectural Style
 
@@ -282,14 +325,15 @@
 ## Technology Stack
 
 ### Backend
-- **Framework**: FastAPI (Python)
-- **ORM**: Prisma
-- **Database**: PostgreSQL (Neon/Supabase)
-- **Cache**: Redis
-- **Vector DB**: Pinecone
+- **Framework**: FastAPI (Python 3.11+)
+- **ORM**: SQLAlchemy 2.0 (async with asyncpg)
+- **Database**: PostgreSQL 15+
+- **Cache**: Redis 7+
+- **Vector DB**: Pinecone (serverless)
 - **Orchestration**: Inngest
-- **Auth**: BetterAuth
+- **Auth**: JWT (python-jose + bcrypt)
 - **Payments**: Stripe
+- **Package Manager**: uv (10-100x faster than pip)
 
 ### Frontend
 - **Framework**: Next.js 14+ (App Router)
