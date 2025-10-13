@@ -348,13 +348,16 @@ class AgentService:
     async def delete_squad_member(
         db: AsyncSession,
         member_id: UUID,
-    ) -> None:
+    ) -> bool:
         """
         Permanently delete a squad member.
 
         Args:
             db: Database session
             member_id: Squad member UUID
+
+        Returns:
+            True if deleted successfully
 
         Raises:
             HTTPException: If squad member not found
@@ -369,6 +372,7 @@ class AgentService:
 
         await db.delete(squad_member)
         await db.commit()
+        return True
 
     @staticmethod
     async def get_squad_composition(
@@ -388,7 +392,9 @@ class AgentService:
         members = await AgentService.get_squad_members(db, squad_id, active_only=True)
 
         composition = {
+            "squad_id": str(squad_id),
             "total_members": len(members),
+            "active_members": len(members),
             "roles": {},
             "llm_providers": {},
             "members": []

@@ -16,6 +16,12 @@ from pydantic import BaseModel
 from backend.schemas.agent_message import AgentMessageCreate, AgentMessageResponse
 
 
+def get_sse_manager():
+    """Lazy import to avoid circular dependency"""
+    from backend.services.sse_service import sse_manager
+    return sse_manager
+
+
 class MessageSubscription(BaseModel):
     """Subscription to messages for an agent"""
     agent_id: UUID
@@ -103,6 +109,26 @@ class MessageBus:
 
             # Notify subscribers
             await self._notify_subscribers(recipient_id, message)
+
+            # Broadcast to SSE connections if task_execution_id is present
+            if task_execution_id:
+                try:
+                    sse_manager = get_sse_manager()
+                    await sse_manager.broadcast_to_execution(
+                        execution_id=task_execution_id,
+                        event="message",
+                        data={
+                            "message_id": str(message.id),
+                            "sender_id": str(sender_id),
+                            "recipient_id": str(recipient_id) if recipient_id else None,
+                            "content": content,
+                            "message_type": message_type,
+                            "metadata": metadata or {},
+                        }
+                    )
+                except Exception as e:
+                    # Don't fail message sending if SSE broadcast fails
+                    print(f"Error broadcasting to SSE: {e}")
 
             return message
 

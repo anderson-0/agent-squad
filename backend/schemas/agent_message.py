@@ -16,9 +16,10 @@ class AgentMessageBase(BaseModel):
 
 class AgentMessageCreate(AgentMessageBase):
     """Schema for creating agent messages"""
-    task_execution_id: UUID
+    task_execution_id: Optional[UUID] = None
     sender_id: UUID
     recipient_id: Optional[UUID] = Field(default=None, description="None for broadcast messages")
+    message_metadata: Optional[Dict[str, Any]] = Field(default=None, description="Additional metadata")
 
 
 class AgentMessageResponse(AgentMessageBase):
@@ -148,6 +149,17 @@ class Standup(BaseModel):
     yesterday: str = Field(..., description="What was accomplished yesterday")
     today: str = Field(..., description="What will be worked on today")
     blockers: List[str] = Field(default_factory=list, description="Any blockers")
+
+
+class MessageStats(BaseModel):
+    """Message statistics for a task execution"""
+    execution_id: str
+    total_messages: int
+    messages_by_type: Dict[str, int]
+    messages_by_sender: Dict[str, int]
+    messages_by_recipient: Dict[str, int]
+    broadcast_count: int
+    time_range: Dict[str, Any]
 
 
 # Union type for all structured messages

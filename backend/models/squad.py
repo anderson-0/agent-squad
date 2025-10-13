@@ -18,6 +18,7 @@ class Squad(Base, TimestampMixin):
     org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="SET NULL"), nullable=True)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     name = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
     status = Column(String, nullable=False, default="active")  # active, paused, archived
     config = Column(JSON, nullable=False, server_default="{}")
 

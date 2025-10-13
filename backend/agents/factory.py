@@ -168,6 +168,22 @@ class AgentFactory:
 
         return specializations
 
+    @classmethod
+    def load_system_prompt(cls, role: str, specialization: Optional[str] = None) -> str:
+        """
+        Load system prompt for a role/specialization.
+
+        Args:
+            role: Agent role
+            specialization: Optional specialization
+
+        Returns:
+            System prompt string
+        """
+        # For now, return a default prompt
+        # In the future, this will load from files in the roles/ directory
+        return f"You are a {role} agent. Your role is to assist with {role.replace('_', ' ')} tasks."
+
 
 # Convenience functions for common operations
 

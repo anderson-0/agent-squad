@@ -44,3 +44,7 @@ def setup_logging():
 def get_logger(name: str = None):
     """Get a structured logger instance"""
     return structlog.get_logger(name)
+
+
+# Default logger instance
+logger = get_logger(__name__)

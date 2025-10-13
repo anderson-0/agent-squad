@@ -32,6 +32,7 @@ class SquadService:
         db: AsyncSession,
         user_id: UUID,
         name: str,
+        description: Optional[str] = None,
         org_id: Optional[UUID] = None,
         config: Optional[Dict[str, Any]] = None,
     ) -> Squad:
@@ -42,6 +43,7 @@ class SquadService:
             db: Database session
             user_id: User UUID
             name: Squad name
+            description: Optional squad description
             org_id: Optional organization UUID
             config: Optional squad configuration
 
@@ -74,6 +76,7 @@ class SquadService:
             user_id=user_id,
             org_id=org_id,
             name=name,
+            description=description,
             status="active",
             config=config or {},
         )
@@ -146,6 +149,8 @@ class SquadService:
         db: AsyncSession,
         squad_id: UUID,
         name: Optional[str] = None,
+        description: Optional[str] = None,
+        status: Optional[str] = None,
         config: Optional[Dict[str, Any]] = None,
     ) -> Squad:
         """
@@ -155,6 +160,8 @@ class SquadService:
             db: Database session
             squad_id: Squad UUID
             name: Optional new name
+            description: Optional new description
+            status: Optional new status
             config: Optional new config (will merge with existing)
 
         Returns:
@@ -173,6 +180,18 @@ class SquadService:
 
         if name is not None:
             squad.name = name
+
+        if description is not None:
+            squad.description = description
+
+        if status is not None:
+            valid_statuses = ["active", "paused", "archived"]
+            if status not in valid_statuses:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invalid status: {status}. Valid: {', '.join(valid_statuses)}"
+                )
+            squad.status = status
 
         if config is not None:
             # Merge with existing config
@@ -340,15 +359,19 @@ class SquadService:
         active_members = [m for m in squad.members if m.is_active]
 
         return {
-            "id": str(squad.id),
-            "name": squad.name,
-            "status": squad.status,
-            "user_id": str(squad.user_id),
-            "org_id": str(squad.org_id) if squad.org_id else None,
-            "config": squad.config,
-            "created_at": squad.created_at.isoformat(),
-            "updated_at": squad.updated_at.isoformat(),
             "member_count": len(active_members),
+            "active_member_count": len(active_members),
+            "squad": {
+                "id": str(squad.id),
+                "name": squad.name,
+                "description": squad.description,
+                "status": squad.status,
+                "user_id": str(squad.user_id),
+                "org_id": str(squad.org_id) if squad.org_id else None,
+                "config": squad.config,
+                "created_at": squad.created_at.isoformat(),
+                "updated_at": squad.updated_at.isoformat(),
+            },
             "members": [
                 {
                     "id": str(m.id),
@@ -430,9 +453,9 @@ class SquadService:
 
         return {
             "squad_id": str(squad_id),
-            "total_estimated_monthly_cost": round(total_cost, 2),
-            "active_agents": len(active_members),
-            "breakdown": cost_breakdown,
+            "member_count": len(active_members),
+            "total_monthly_cost": round(total_cost, 2),
+            "cost_by_model": cost_breakdown,
             "note": "Costs are estimates based on average usage. Actual costs may vary.",
         }
 

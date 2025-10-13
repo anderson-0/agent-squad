@@ -18,6 +18,38 @@ from backend.models.squad import Squad
 from backend.models.message import AgentMessage
 
 
+def get_sse_manager():
+    """Lazy import to avoid circular dependency"""
+    from backend.services.sse_service import sse_manager
+    return sse_manager
+
+
+async def broadcast_sse_event(
+    execution_id: UUID,
+    squad_id: UUID,
+    event: str,
+    data: Dict[str, Any]
+):
+    """
+    Broadcast event to SSE connections.
+
+    Args:
+        execution_id: Task execution ID
+        squad_id: Squad ID
+        event: Event type
+        data: Event data
+    """
+    try:
+        sse_manager = get_sse_manager()
+        # Broadcast to execution subscribers
+        await sse_manager.broadcast_to_execution(execution_id, event, data)
+        # Also broadcast to squad subscribers
+        await sse_manager.broadcast_to_squad(squad_id, event, data)
+    except Exception as e:
+        # Don't fail operations if SSE broadcast fails
+        print(f"Error broadcasting SSE event: {e}")
+
+
 class TaskExecutionService:
     """Service for handling task execution operations"""
 
@@ -97,6 +129,17 @@ class TaskExecutionService:
             task_execution.id,
             "info",
             "Task execution started",
+        )
+
+        # Broadcast SSE event
+        await broadcast_sse_event(
+            execution_id=task_execution.id,
+            squad_id=squad_id,
+            event="execution_started",
+            data={
+                "task_id": str(task_id),
+                "status": "pending",
+            }
         )
 
         return task_execution
@@ -214,6 +257,18 @@ class TaskExecutionService:
             message,
         )
 
+        # Broadcast SSE event
+        await broadcast_sse_event(
+            execution_id=execution_id,
+            squad_id=execution.squad_id,
+            event="status_update",
+            data={
+                "old_status": old_status,
+                "new_status": status,
+                "message": message,
+            }
+        )
+
         return execution
 
     @staticmethod
@@ -262,6 +317,14 @@ class TaskExecutionService:
 
         await db.commit()
         await db.refresh(execution)
+
+        # Broadcast SSE event for log
+        await broadcast_sse_event(
+            execution_id=execution_id,
+            squad_id=execution.squad_id,
+            event="log",
+            data=log_entry
+        )
 
         return execution
 
@@ -319,6 +382,17 @@ class TaskExecutionService:
             execution_id,
             "info",
             "Task execution completed successfully",
+        )
+
+        # Broadcast SSE event
+        await broadcast_sse_event(
+            execution_id=execution_id,
+            squad_id=execution.squad_id,
+            event="completed",
+            data={
+                "result": result,
+                "duration_seconds": (execution.completed_at - execution.started_at).total_seconds() if execution.completed_at and execution.started_at else None,
+            }
         )
 
         return execution
@@ -381,6 +455,17 @@ class TaskExecutionService:
             "error",
             f"Task execution failed: {error}",
             metadata=error_metadata,
+        )
+
+        # Broadcast SSE event
+        await broadcast_sse_event(
+            execution_id=execution_id,
+            squad_id=execution.squad_id,
+            event="error",
+            data={
+                "error": error,
+                "error_metadata": error_metadata or {},
+            }
         )
 
         return execution
