@@ -545,6 +545,597 @@ class StripeService:
 
 ---
 
+## 🚀 Phase 4: MCP Server Integration (Weeks 6-7)
+
+**Status**: 🟡 **IN PROGRESS** (2025-10-13)
+
+### Goals
+- Connect agents to real development tools
+- Enable agents to read/write code via Git
+- Integrate with Jira for ticket management
+- Access documentation from Confluence/Notion
+- Enable real file system operations
+
+### Why MCP (Model Context Protocol)?
+MCP allows AI agents to interact with external tools and data sources through a standardized protocol. Instead of building custom integrations for each tool, we use MCP servers that provide:
+- **Git operations**: Clone repos, read files, create commits, push changes
+- **Jira integration**: Read tickets, update status, post comments
+- **Documentation access**: Read from Confluence, Notion, Google Docs
+- **File system**: Read/write files, search code
+- **Database access**: Query databases for context
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Agent Squad Platform                      │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌──────────────┐      ┌──────────────┐                    │
+│  │ BaseAgent    │      │ Specialized  │                    │
+│  │              │      │ Agents       │                    │
+│  └──────┬───────┘      └──────┬───────┘                    │
+│         │                     │                             │
+│         └──────────┬──────────┘                             │
+│                    │                                         │
+│         ┌──────────▼──────────┐                            │
+│         │  MCP Client Manager │                            │
+│         │  - Connection pool  │                            │
+│         │  - Tool registry    │                            │
+│         │  - Request routing  │                            │
+│         └──────────┬──────────┘                            │
+│                    │                                         │
+└────────────────────┼─────────────────────────────────────────┘
+                     │ MCP Protocol (stdio/SSE)
+         ┌───────────┼───────────┐
+         │           │           │
+    ┌────▼────┐ ┌───▼────┐ ┌───▼────┐
+    │ Git MCP │ │ Jira   │ │ File   │
+    │ Server  │ │ Server │ │ Server │
+    └────┬────┘ └───┬────┘ └───┬────┘
+         │          │          │
+    ┌────▼────┐ ┌──▼─────┐ ┌──▼─────┐
+    │ GitHub  │ │ Jira   │ │ Local  │
+    │ API     │ │ API    │ │ Files  │
+    └─────────┘ └────────┘ └────────┘
+```
+
+### Tasks
+
+#### Day 1: MCP Client Foundation
+**Create MCP client manager to handle multiple MCP server connections**
+
+```python
+# backend/integrations/mcp/client.py
+from typing import Dict, List, Optional, Any
+import asyncio
+import json
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
+
+class MCPClientManager:
+    """Manages connections to multiple MCP servers"""
+
+    def __init__(self):
+        self.connections: Dict[str, ClientSession] = {}
+        self.tools: Dict[str, Dict[str, Any]] = {}
+
+    async def connect_server(
+        self,
+        name: str,
+        command: str,
+        args: List[str] = None,
+        env: Dict[str, str] = None
+    ):
+        """Connect to an MCP server via stdio"""
+        server_params = StdioServerParameters(
+            command=command,
+            args=args or [],
+            env=env
+        )
+
+        # Create stdio transport
+        async with stdio_client(server_params) as (read, write):
+            async with ClientSession(read, write) as session:
+                # Initialize connection
+                await session.initialize()
+
+                # Store connection
+                self.connections[name] = session
+
+                # List available tools
+                tools_result = await session.list_tools()
+                self.tools[name] = {
+                    tool.name: tool for tool in tools_result.tools
+                }
+
+                return session
+
+    async def call_tool(
+        self,
+        server_name: str,
+        tool_name: str,
+        arguments: Dict[str, Any]
+    ) -> Any:
+        """Call a tool on a specific MCP server"""
+        if server_name not in self.connections:
+            raise ValueError(f"Server {server_name} not connected")
+
+        session = self.connections[server_name]
+        result = await session.call_tool(tool_name, arguments)
+        return result
+
+    def get_available_tools(self, server_name: Optional[str] = None) -> Dict:
+        """Get list of available tools"""
+        if server_name:
+            return self.tools.get(server_name, {})
+        return self.tools
+
+    async def disconnect(self, server_name: str):
+        """Disconnect from a server"""
+        if server_name in self.connections:
+            # Session cleanup handled by context manager
+            del self.connections[server_name]
+            del self.tools[server_name]
+
+    async def disconnect_all(self):
+        """Disconnect from all servers"""
+        for name in list(self.connections.keys()):
+            await self.disconnect(name)
+```
+
+#### Day 2: Git Integration
+**Enable agents to read and write code**
+
+```python
+# backend/integrations/mcp/git_integration.py
+from typing import Optional, List
+from .client import MCPClientManager
+
+class GitIntegration:
+    """Git operations via MCP"""
+
+    def __init__(self, mcp_client: MCPClientManager):
+        self.client = mcp_client
+        self.server_name = "git"
+
+    async def clone_repo(
+        self,
+        repo_url: str,
+        target_dir: str,
+        branch: Optional[str] = None
+    ) -> Dict:
+        """Clone a repository"""
+        return await self.client.call_tool(
+            self.server_name,
+            "git_clone",
+            {
+                "url": repo_url,
+                "path": target_dir,
+                "branch": branch
+            }
+        )
+
+    async def read_file(self, repo_path: str, file_path: str) -> str:
+        """Read file from repository"""
+        result = await self.client.call_tool(
+            self.server_name,
+            "read_file",
+            {
+                "repo_path": repo_path,
+                "file_path": file_path
+            }
+        )
+        return result.content
+
+    async def list_files(
+        self,
+        repo_path: str,
+        directory: str = ".",
+        pattern: Optional[str] = None
+    ) -> List[str]:
+        """List files in repository"""
+        result = await self.client.call_tool(
+            self.server_name,
+            "list_files",
+            {
+                "repo_path": repo_path,
+                "directory": directory,
+                "pattern": pattern
+            }
+        )
+        return result.files
+
+    async def create_branch(
+        self,
+        repo_path: str,
+        branch_name: str,
+        from_branch: Optional[str] = None
+    ) -> Dict:
+        """Create a new branch"""
+        return await self.client.call_tool(
+            self.server_name,
+            "create_branch",
+            {
+                "repo_path": repo_path,
+                "branch_name": branch_name,
+                "from_branch": from_branch
+            }
+        )
+
+    async def commit_changes(
+        self,
+        repo_path: str,
+        message: str,
+        files: Optional[List[str]] = None
+    ) -> Dict:
+        """Commit changes"""
+        return await self.client.call_tool(
+            self.server_name,
+            "commit",
+            {
+                "repo_path": repo_path,
+                "message": message,
+                "files": files  # None = commit all
+            }
+        )
+
+    async def push_changes(
+        self,
+        repo_path: str,
+        branch: Optional[str] = None,
+        remote: str = "origin"
+    ) -> Dict:
+        """Push changes to remote"""
+        return await self.client.call_tool(
+            self.server_name,
+            "push",
+            {
+                "repo_path": repo_path,
+                "branch": branch,
+                "remote": remote
+            }
+        )
+
+    async def create_pull_request(
+        self,
+        repo_path: str,
+        title: str,
+        description: str,
+        base_branch: str = "main",
+        head_branch: Optional[str] = None
+    ) -> Dict:
+        """Create a pull request"""
+        return await self.client.call_tool(
+            self.server_name,
+            "create_pr",
+            {
+                "repo_path": repo_path,
+                "title": title,
+                "description": description,
+                "base": base_branch,
+                "head": head_branch
+            }
+        )
+```
+
+#### Day 3: Jira Integration
+**Enable agents to work with tickets**
+
+```python
+# backend/integrations/mcp/jira_integration.py
+from typing import List, Optional, Dict, Any
+from .client import MCPClientManager
+
+class JiraIntegration:
+    """Jira operations via MCP"""
+
+    def __init__(self, mcp_client: MCPClientManager):
+        self.client = mcp_client
+        self.server_name = "jira"
+
+    async def get_ticket(self, ticket_id: str) -> Dict:
+        """Get ticket details"""
+        return await self.client.call_tool(
+            self.server_name,
+            "get_issue",
+            {"issue_key": ticket_id}
+        )
+
+    async def search_tickets(
+        self,
+        jql: str,
+        max_results: int = 50
+    ) -> List[Dict]:
+        """Search tickets with JQL"""
+        result = await self.client.call_tool(
+            self.server_name,
+            "search_issues",
+            {
+                "jql": jql,
+                "max_results": max_results
+            }
+        )
+        return result.issues
+
+    async def update_ticket_status(
+        self,
+        ticket_id: str,
+        status: str
+    ) -> Dict:
+        """Update ticket status"""
+        return await self.client.call_tool(
+            self.server_name,
+            "transition_issue",
+            {
+                "issue_key": ticket_id,
+                "transition": status
+            }
+        )
+
+    async def add_comment(
+        self,
+        ticket_id: str,
+        comment: str
+    ) -> Dict:
+        """Add comment to ticket"""
+        return await self.client.call_tool(
+            self.server_name,
+            "add_comment",
+            {
+                "issue_key": ticket_id,
+                "comment": comment
+            }
+        )
+
+    async def create_ticket(
+        self,
+        project_key: str,
+        summary: str,
+        description: str,
+        issue_type: str = "Task",
+        **kwargs
+    ) -> Dict:
+        """Create a new ticket"""
+        return await self.client.call_tool(
+            self.server_name,
+            "create_issue",
+            {
+                "project": project_key,
+                "summary": summary,
+                "description": description,
+                "issuetype": issue_type,
+                **kwargs
+            }
+        )
+```
+
+#### Day 4: Agent MCP Integration
+**Integrate MCP tools into agents**
+
+```python
+# backend/agents/base_agent.py (additions)
+
+class BaseSquadAgent:
+    def __init__(
+        self,
+        # ... existing params
+        mcp_client: Optional[MCPClientManager] = None
+    ):
+        # ... existing code
+        self.mcp_client = mcp_client
+        self.git = GitIntegration(mcp_client) if mcp_client else None
+        self.jira = JiraIntegration(mcp_client) if mcp_client else None
+
+    async def execute_tool(
+        self,
+        tool_name: str,
+        **kwargs
+    ) -> Any:
+        """Execute an MCP tool"""
+        if not self.mcp_client:
+            raise ValueError("MCP client not configured")
+
+        # Map tool names to integrations
+        if tool_name.startswith("git_"):
+            method_name = tool_name.replace("git_", "")
+            return await getattr(self.git, method_name)(**kwargs)
+
+        elif tool_name.startswith("jira_"):
+            method_name = tool_name.replace("jira_", "")
+            return await getattr(self.jira, method_name)(**kwargs)
+
+        else:
+            raise ValueError(f"Unknown tool: {tool_name}")
+
+    async def process_with_tools(
+        self,
+        message: str,
+        context: Dict[str, Any]
+    ) -> str:
+        """Process message with access to tools"""
+        # Add available tools to prompt
+        available_tools = []
+        if self.git:
+            available_tools.extend([
+                "git_read_file", "git_list_files",
+                "git_commit_changes", "git_create_pull_request"
+            ])
+        if self.jira:
+            available_tools.extend([
+                "jira_get_ticket", "jira_update_status",
+                "jira_add_comment"
+            ])
+
+        # Enhance system prompt with tool descriptions
+        tool_prompt = f"""
+You have access to the following tools:
+{json.dumps(available_tools, indent=2)}
+
+To use a tool, respond with JSON in this format:
+{{"action": "use_tool", "tool": "tool_name", "args": {{"param": "value"}}}}
+"""
+
+        # Get LLM response (may include tool use)
+        response = await self.process_message(
+            message=message,
+            context=context,
+            system_prompt_addition=tool_prompt
+        )
+
+        # Parse response for tool usage
+        try:
+            parsed = json.loads(response)
+            if parsed.get("action") == "use_tool":
+                # Execute tool
+                tool_result = await self.execute_tool(
+                    parsed["tool"],
+                    **parsed["args"]
+                )
+
+                # Ask LLM to process tool result
+                follow_up = await self.process_message(
+                    message=f"Tool result: {tool_result}",
+                    context=context
+                )
+                return follow_up
+        except json.JSONDecodeError:
+            pass
+
+        return response
+```
+
+#### Day 5: Task Execution with MCP
+**Update task execution to use MCP tools**
+
+```python
+# backend/services/task_execution_service.py (additions)
+
+class TaskExecutionService:
+    async def execute_with_mcp(
+        self,
+        task_execution_id: str,
+        project_config: Dict
+    ):
+        """Execute task with MCP tool access"""
+        execution = await self.get_execution(task_execution_id)
+
+        # Initialize MCP client
+        mcp_client = MCPClientManager()
+
+        # Connect to Git server
+        if project_config.get("git_repo"):
+            await mcp_client.connect_server(
+                "git",
+                "npx",
+                args=["-y", "@modelcontextprotocol/server-git"],
+                env={"GIT_REPO_PATH": project_config["repo_path"]}
+            )
+
+        # Connect to Jira server
+        if project_config.get("jira_url"):
+            await mcp_client.connect_server(
+                "jira",
+                "npx",
+                args=["-y", "@modelcontextprotocol/server-jira"],
+                env={
+                    "JIRA_URL": project_config["jira_url"],
+                    "JIRA_TOKEN": project_config["jira_token"]
+                }
+            )
+
+        try:
+            # Execute task with tool access
+            await self._execute_with_tools(
+                execution,
+                mcp_client
+            )
+        finally:
+            # Cleanup
+            await mcp_client.disconnect_all()
+```
+
+#### Day 6: API Endpoints for MCP
+**Create endpoints to manage MCP connections**
+
+```python
+# backend/api/v1/endpoints/mcp.py
+from fastapi import APIRouter, Depends, HTTPException
+from typing import List
+from backend.core.auth import get_current_user
+from backend.models import User
+from backend.schemas.mcp import (
+    MCPServerCreate,
+    MCPServerConfig,
+    MCPToolInfo
+)
+
+router = APIRouter()
+
+@router.post("/mcp/servers", response_model=MCPServerConfig)
+async def register_mcp_server(
+    server: MCPServerCreate,
+    current_user: User = Depends(get_current_user)
+):
+    """Register an MCP server for a project"""
+    # Store server config in database
+    # Return server configuration
+    pass
+
+@router.get("/mcp/servers/{project_id}", response_model=List[MCPServerConfig])
+async def list_mcp_servers(
+    project_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """List MCP servers for a project"""
+    pass
+
+@router.get("/mcp/tools/{server_name}", response_model=List[MCPToolInfo])
+async def list_tools(
+    server_name: str,
+    current_user: User = Depends(get_current_user)
+):
+    """List available tools from an MCP server"""
+    pass
+
+@router.post("/mcp/tools/{server_name}/{tool_name}")
+async def execute_tool(
+    server_name: str,
+    tool_name: str,
+    arguments: Dict[str, Any],
+    current_user: User = Depends(get_current_user)
+):
+    """Execute a tool on an MCP server"""
+    pass
+```
+
+#### Day 7: Testing & Documentation
+
+**Test coverage:**
+- Test MCP client connection
+- Test Git operations
+- Test Jira operations
+- Test agent tool execution
+- Test end-to-end workflow with tools
+
+### Deliverables - Phase 4
+- ✅ MCP client manager
+- ✅ Git integration (read/write code)
+- ✅ Jira integration (ticket management)
+- ✅ Agent tool execution
+- ✅ API endpoints for MCP management
+- ✅ Comprehensive tests
+- ✅ Documentation
+
+### Success Criteria
+- ✅ Agents can clone and read Git repositories
+- ✅ Agents can create commits and pull requests
+- ✅ Agents can read and update Jira tickets
+- ✅ End-to-end test: Agent receives Jira ticket, creates branch, writes code, creates PR
+- ✅ All tests passing (target: 80%+ coverage)
+
+---
+
 ## Phase 3 (Original Plan): Agent Framework Integration (Weeks 4-5)
 
 ### Tasks

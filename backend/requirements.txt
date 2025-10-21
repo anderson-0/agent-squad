@@ -51,6 +51,13 @@ pytest-cov==4.1.0
 httpx==0.25.2
 faker==20.1.0
 
+# MCP & Integrations (Phase 4)
+mcp[cli]==1.17.0
+mcp-server-git==2025.9.25
+mcp-atlassian==0.11.9
+PyGithub==2.8.1
+GitPython==3.1.45
+
 # Development
 black==23.12.0
 ruff==0.1.7

@@ -12,7 +12,17 @@
       "Bash(curl:*)",
       "Bash(python -m pytest tests/test_security.py -v)",
       "Bash(docker ps:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:smithery.ai)",
+      "Bash(uv pip install:*)",
+      "Bash(docker logs:*)",
+      "Bash(do echo \"Check $i/20...\")",
+      "Bash(/dev/null)",
+      "Bash(break)",
+      "Bash(docker stats:*)",
+      "Bash(test:*)"
     ],
     "deny": [],
     "ask": []
