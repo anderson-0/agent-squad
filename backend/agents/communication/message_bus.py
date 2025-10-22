@@ -5,15 +5,21 @@ Central hub for routing messages between agents.
 Supports point-to-point and broadcast messaging.
 """
 from typing import Dict, List, Optional, Callable, Any
-from uuid import UUID
+from uuid import UUID, uuid4
 from datetime import datetime
 from collections import defaultdict, deque
 import asyncio
 import json
 
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.schemas.agent_message import AgentMessageCreate, AgentMessageResponse
+from backend.agents.communication.message_utils import (
+    get_agent_details,
+    get_conversation_thread_id,
+)
+from backend.models.agent_message import AgentMessage
 
 
 def get_sse_manager():
@@ -65,6 +71,7 @@ class MessageBus:
         message_type: str,
         metadata: Optional[Dict[str, Any]] = None,
         task_execution_id: Optional[UUID] = None,
+        db: Optional[AsyncSession] = None,
     ) -> AgentMessageResponse:
         """
         Send a message from one agent to another (or broadcast).
@@ -76,14 +83,18 @@ class MessageBus:
             message_type: Type of message (task_assignment, status_update, etc.)
             metadata: Optional metadata
             task_execution_id: Optional task execution context
+            db: Optional database session for enriched metadata (agent names, roles)
 
         Returns:
             Created message
         """
         async with self._lock:
+            # Generate unique message ID
+            message_id = uuid4()
+
             # Create message
             message = AgentMessageResponse(
-                id=UUID(int=len(self._all_messages)),  # Simple ID generation
+                id=message_id,
                 task_execution_id=task_execution_id or UUID(int=0),
                 sender_id=sender_id,
                 recipient_id=recipient_id,
@@ -92,6 +103,26 @@ class MessageBus:
                 message_metadata=metadata or {},
                 created_at=datetime.utcnow()
             )
+
+            # Persist to database if db session provided
+            if db is not None and task_execution_id is not None:
+                try:
+                    db_message = AgentMessage(
+                        id=message_id,
+                        task_execution_id=task_execution_id,
+                        sender_id=sender_id,
+                        recipient_id=recipient_id,
+                        content=content,
+                        message_type=message_type,
+                        message_metadata=metadata or {}
+                    )
+                    db.add(db_message)
+                    await db.flush()
+                    # Update message with database timestamp
+                    message.created_at = db_message.created_at
+                except Exception as e:
+                    # Log error but don't fail message sending
+                    print(f"Error persisting message to database: {e}")
 
             # Store in all messages
             self._all_messages.append(message)
@@ -113,18 +144,15 @@ class MessageBus:
             # Broadcast to SSE connections if task_execution_id is present
             if task_execution_id:
                 try:
-                    sse_manager = get_sse_manager()
-                    await sse_manager.broadcast_to_execution(
+                    await self._broadcast_to_sse(
                         execution_id=task_execution_id,
-                        event="message",
-                        data={
-                            "message_id": str(message.id),
-                            "sender_id": str(sender_id),
-                            "recipient_id": str(recipient_id) if recipient_id else None,
-                            "content": content,
-                            "message_type": message_type,
-                            "metadata": metadata or {},
-                        }
+                        message=message,
+                        sender_id=sender_id,
+                        recipient_id=recipient_id,
+                        content=content,
+                        message_type=message_type,
+                        metadata=metadata,
+                        db=db,
                     )
                 except Exception as e:
                     # Don't fail message sending if SSE broadcast fails
@@ -139,6 +167,7 @@ class MessageBus:
         message_type: str,
         metadata: Optional[Dict[str, Any]] = None,
         task_execution_id: Optional[UUID] = None,
+        db: Optional[AsyncSession] = None,
     ) -> AgentMessageResponse:
         """
         Broadcast a message to all agents.
@@ -149,6 +178,7 @@ class MessageBus:
             message_type: Type of message
             metadata: Optional metadata
             task_execution_id: Optional task execution context
+            db: Optional database session for enriched metadata
 
         Returns:
             Created message
@@ -159,7 +189,8 @@ class MessageBus:
             content=content,
             message_type=message_type,
             metadata=metadata,
-            task_execution_id=task_execution_id
+            task_execution_id=task_execution_id,
+            db=db,
         )
 
     async def get_messages(
@@ -264,6 +295,83 @@ class MessageBus:
                 self._subscribers[agent_id].remove(callback)
                 return True
             return False
+
+    async def _broadcast_to_sse(
+        self,
+        execution_id: UUID,
+        message: AgentMessageResponse,
+        sender_id: UUID,
+        recipient_id: Optional[UUID],
+        content: str,
+        message_type: str,
+        metadata: Optional[Dict[str, Any]],
+        db: Optional[AsyncSession] = None,
+    ):
+        """
+        Broadcast message to SSE with enriched metadata.
+
+        If db session is provided, enriches message with agent names and roles.
+
+        Args:
+            execution_id: Task execution ID
+            message: Message object
+            sender_id: Sender agent ID
+            recipient_id: Recipient agent ID (None for broadcast)
+            content: Message content
+            message_type: Message type
+            metadata: Message metadata
+            db: Optional database session for enrichment
+        """
+        sse_manager = get_sse_manager()
+
+        # Base data
+        data = {
+            "message_id": str(message.id),
+            "sender_id": str(sender_id),
+            "recipient_id": str(recipient_id) if recipient_id else None,
+            "content": content,
+            "message_type": message_type,
+            "metadata": metadata or {},
+            "timestamp": message.created_at.isoformat(),
+        }
+
+        # Enrich with agent details if db is available
+        if db:
+            try:
+                # Get sender details
+                sender_details = await get_agent_details(db, sender_id)
+                if sender_details:
+                    data["sender_role"] = sender_details.role
+                    data["sender_name"] = sender_details.name
+                    data["sender_specialization"] = sender_details.specialization
+
+                # Get recipient details (if not broadcast)
+                if recipient_id:
+                    recipient_details = await get_agent_details(db, recipient_id)
+                    if recipient_details:
+                        data["recipient_role"] = recipient_details.role
+                        data["recipient_name"] = recipient_details.name
+                        data["recipient_specialization"] = recipient_details.specialization
+                else:
+                    # Broadcast message
+                    data["recipient_role"] = "broadcast"
+                    data["recipient_name"] = "All Agents"
+
+                # Add conversation thread ID
+                thread_id = get_conversation_thread_id(metadata)
+                if thread_id:
+                    data["conversation_thread_id"] = thread_id
+
+            except Exception as e:
+                # If enrichment fails, log but continue with base data
+                print(f"Error enriching message metadata: {e}")
+
+        # Broadcast to SSE
+        await sse_manager.broadcast_to_execution(
+            execution_id=execution_id,
+            event="message",
+            data=data
+        )
 
     async def _notify_subscribers(
         self,

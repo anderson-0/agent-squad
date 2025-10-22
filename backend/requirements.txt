@@ -1,7 +1,7 @@
 # Core Framework
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-python-dotenv==1.0.0
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+python-dotenv==1.1.0
 
 # Database & ORM
 sqlalchemy[asyncio]==2.0.23
@@ -12,26 +12,26 @@ psycopg2-binary==2.9.9  # For Alembic migrations
 # Authentication & Security
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
-python-multipart==0.0.6
+python-multipart==0.0.9
 
 # Payments
 stripe==7.4.0
 
 # AI & LLM
-openai==1.3.7
-anthropic==0.7.7
-pinecone-client==2.2.4
+openai==1.58.1
+anthropic==0.42.0
+pinecone-client==5.0.1
 
 # Workflow Orchestration
 inngest==0.3.2
 
 # HTTP Client
-httpx==0.25.2
+httpx==0.28.1
 aiohttp==3.9.1
 
 # Data Validation
-pydantic==2.5.2
-pydantic-settings==2.1.0
+pydantic==2.11.0
+pydantic-settings==2.6.0
 email-validator==2.1.0
 
 # Utilities
@@ -48,7 +48,6 @@ prometheus-client==0.19.0
 pytest==7.4.3
 pytest-asyncio==0.21.1
 pytest-cov==4.1.0
-httpx==0.25.2
 faker==20.1.0
 
 # MCP & Integrations (Phase 4)
