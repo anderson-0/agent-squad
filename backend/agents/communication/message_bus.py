@@ -451,22 +451,99 @@ class MessageBus:
 
 # Global message bus instance
 _message_bus: Optional[MessageBus] = None
+_message_bus_type: Optional[str] = None
 
 
-def get_message_bus() -> MessageBus:
+def get_message_bus():
     """
     Get or create the global message bus instance.
 
+    Returns either in-memory MessageBus or NATS MessageBus based on config.
+    Set MESSAGE_BUS environment variable to "memory" or "nats".
+
     Returns:
-        MessageBus instance
+        MessageBus or NATSMessageBus instance
     """
-    global _message_bus
-    if _message_bus is None:
+    global _message_bus, _message_bus_type
+
+    # Lazy import to avoid circular dependency
+    from backend.core.config import Settings
+    import os
+
+    # Re-read settings to detect environment changes (important for testing)
+    bus_type = os.environ.get('MESSAGE_BUS', 'memory').lower()
+
+    # If bus already exists and type hasn't changed, return it
+    if _message_bus is not None and _message_bus_type == bus_type:
+        return _message_bus
+
+    # Type changed, need to reset
+    if _message_bus is not None and _message_bus_type != bus_type:
+        print(f"⚠️  Message bus type changed from {_message_bus_type} to {bus_type}, resetting...")
+        _message_bus = None
+        _message_bus_type = None
+
+    # Type changed or first initialization
+    if bus_type == "nats":
+        # Use NATS JetStream message bus
+        # Import here to avoid circular dependency
+        from backend.agents.communication.nats_message_bus import NATSMessageBus
+        from backend.agents.communication.nats_config import NATSConfig
+
+        # Get NATS config from environment variables
+        nats_url = os.environ.get('NATS_URL', 'nats://localhost:4222')
+        nats_stream_name = os.environ.get('NATS_STREAM_NAME', 'agent-messages')
+        nats_max_msgs = int(os.environ.get('NATS_MAX_MSGS', '1000000'))
+        nats_max_age_days = int(os.environ.get('NATS_MAX_AGE_DAYS', '7'))
+        nats_consumer_name = os.environ.get('NATS_CONSUMER_NAME', 'agent-processor')
+
+        print(f"🚀 Initializing NATS message bus (url={nats_url})")
+
+        # Create config from settings
+        config = NATSConfig(
+            url=nats_url,
+            stream=NATSConfig.model_fields['stream'].default.copy(
+                update={
+                    "name": nats_stream_name,
+                    "max_msgs": nats_max_msgs,
+                    "max_age": nats_max_age_days * 24 * 60 * 60,
+                }
+            ),
+            consumer=NATSConfig.model_fields['consumer'].default.copy(
+                update={
+                    "durable": nats_consumer_name,
+                }
+            )
+        )
+
+        _message_bus = NATSMessageBus(config)
+        _message_bus_type = "nats"
+
+        # Note: Connection happens lazily when first message is sent
+        # or explicitly via await _message_bus.connect()
+        print("✅ NATS message bus initialized (will connect on first use)")
+
+    else:
+        # Use in-memory message bus (default)
+        print("📝 Using in-memory message bus")
         _message_bus = MessageBus()
+        _message_bus_type = "memory"
+
     return _message_bus
 
 
-def reset_message_bus():
-    """Reset the global message bus (useful for testing)"""
-    global _message_bus
+async def reset_message_bus():
+    """
+    Reset the global message bus (useful for testing).
+
+    If using NATS bus, this will disconnect gracefully.
+    """
+    global _message_bus, _message_bus_type
+
+    if _message_bus is not None:
+        # If NATS bus, disconnect
+        if hasattr(_message_bus, 'disconnect'):
+            await _message_bus.disconnect()
+
     _message_bus = None
+    _message_bus_type = None

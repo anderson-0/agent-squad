@@ -1,0 +1,1 @@
+{"Created":"2025-10-22T14:55:52.633044Z","Name":"replay-consumer","durable_name":"replay-consumer","name":"replay-consumer","deliver_policy":"all","ack_policy":"explicit","ack_wait":30000000000,"max_deliver":-1,"filter_subject":"agent.\u003e","replay_policy":"instant","max_waiting":512,"max_ack_pending":1000,"num_replicas":0}

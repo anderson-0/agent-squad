@@ -83,6 +83,14 @@ class Settings(BaseSettings):
     ENABLE_CLI: bool = False
     ENABLE_WEBHOOKS: bool = True
 
+    # Message Bus Configuration
+    MESSAGE_BUS: str = "memory"  # Options: "memory" or "nats"
+    NATS_URL: str = "nats://localhost:4222"
+    NATS_STREAM_NAME: str = "agent-messages"
+    NATS_MAX_MSGS: int = 1_000_000  # 1M messages
+    NATS_MAX_AGE_DAYS: int = 7  # 7 days retention
+    NATS_CONSUMER_NAME: str = "agent-processor"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

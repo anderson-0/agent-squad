@@ -10,6 +10,8 @@ from backend.api.v1.endpoints import (
     task_executions,
     agent_messages,
     sse,
+    routing_rules,
+    conversations,
 )
 
 
@@ -23,6 +25,8 @@ api_router.include_router(squad_members.router)
 api_router.include_router(task_executions.router)
 api_router.include_router(agent_messages.router)
 api_router.include_router(sse.router)
+api_router.include_router(routing_rules.router)
+api_router.include_router(conversations.router)
 
 # Future routers will be added here:
 # api_router.include_router(projects.router)

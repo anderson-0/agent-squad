@@ -52,15 +52,44 @@ async def test_db() -> AsyncGenerator[AsyncSession, None]:
     """
     Create a fresh database for each test function.
     """
-    # Create all tables
+    # Create all tables (skip drop since tables exist from migrations)
     async with test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-        await conn.run_sync(Base.metadata.create_all)
+        # Only create tables that don't exist yet
+        # Note: This assumes migrations have been run
+        # If tables already exist, this will silently continue
+        try:
+            await conn.run_sync(Base.metadata.create_all, checkfirst=True)
+        except Exception:
+            # Tables may already exist from migrations
+            pass
 
     # Create session
     async with TestAsyncSessionLocal() as session:
-        yield session
-        await session.rollback()
+        try:
+            yield session
+        finally:
+            # Clean up test data after each test
+            await session.rollback()
+            # Delete all data from test tables in correct order (respecting foreign keys)
+            try:
+                from sqlalchemy import text
+                # Order matters due to foreign key constraints
+                await session.execute(text("DELETE FROM conversation_events"))
+                await session.execute(text("DELETE FROM agent_conversations"))
+                await session.execute(text("DELETE FROM routing_rules"))
+                await session.execute(text("DELETE FROM default_routing_templates"))
+                await session.execute(text("DELETE FROM agent_messages"))
+                await session.execute(text("DELETE FROM task_executions"))
+                await session.execute(text("DELETE FROM tasks"))
+                await session.execute(text("DELETE FROM projects"))
+                await session.execute(text("DELETE FROM squad_members"))
+                await session.execute(text("DELETE FROM squads"))
+                await session.execute(text("DELETE FROM organizations"))
+                await session.execute(text("DELETE FROM users"))
+                await session.commit()
+            except Exception:
+                # Tables may not exist yet or other errors
+                await session.rollback()
 
 
 async def override_get_db() -> AsyncGenerator[AsyncSession, None]:

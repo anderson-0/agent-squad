@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  nats:
+    image: nats:2.10.7-alpine
+    container_name: agent-squad-nats
+    ports:
+      - "4222:4222"    # Client connections
+      - "8222:8222"    # HTTP monitoring
+    command:
+      - "-js"
+      - "-m"
+      - "8222"
+    volumes:
+      - nats-data:/data
+    restart: unless-stopped
+
+volumes:
+  nats-data:
