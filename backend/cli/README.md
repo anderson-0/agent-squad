@@ -1,9 +1,50 @@
-# Agent Message Streaming CLI
+# Agent Squad CLI Tools
 
-Real-time visualization of agent-to-agent communication in your terminal.
+Command-line tools for managing squads, templates, and monitoring agent communication.
+
+## Available Tools
+
+### 1. Apply Template (`apply_template.py`)
+Quickly create squads from pre-built templates with agents and routing rules.
+
+```bash
+# List available templates
+python -m backend.cli.apply_template --list
+
+# Create a development squad
+python -m backend.cli.apply_template \
+  --user-email user@example.com \
+  --template software-dev-squad \
+  --squad-name "Alpha Team"
+```
+
+### 2. Create Demo Squad (`create_demo_squad.py`)
+Create a simple demo squad for testing.
+
+```bash
+python -m backend.cli.create_demo_squad \
+  --user-email user@example.com \
+  --squad-name "Test Squad"
+```
+
+### 3. Stream Agent Messages (`stream_agent_messages.py`)
+Real-time visualization of agent-to-agent communication.
+
+```bash
+python -m backend.cli.stream_agent_messages \
+  --execution-id abc-123 \
+  --filter-role backend_developer
+```
 
 ## Features
 
+### Template Application
+- 🚀 **Quick Setup**: Create complete squads in seconds
+- 📋 **Pre-configured**: Templates include agents and routing rules
+- 🎨 **Customizable**: Override template settings as needed
+- 📊 **Clear Output**: Beautiful formatting showing all created resources
+
+### Message Streaming
 - 🎨 **Color-Coded Agents**: Different color for each agent role
 - 🎯 **Message Type Icons**: Visual indicators for different message types
 - 🔍 **Filters**: Filter by agent role or message type
@@ -25,7 +66,84 @@ click==8.1.7
 requests==2.31.0
 ```
 
-## Quick Start
+## Apply Template Tool
+
+The `apply_template` CLI is the fastest way to create production-ready squads.
+
+### List Available Templates
+
+```bash
+python -m backend.cli.apply_template --list
+```
+
+Output:
+```
+================================================================================
+                           📋 AVAILABLE SQUAD TEMPLATES
+================================================================================
+
+⭐ Software Development Squad
+    Slug: software-dev-squad
+    Category: development
+    Description: Complete development team with PM, developers, architects, and QA
+    Used: 20 times
+    Contains: 6 agents, 17 routing rules
+    Roles: project_manager, solution_architect, tech_lead, backend_developer,
+           frontend_developer, qa_tester
+
+================================================================================
+Total: 1 template(s)
+💡 Tip: Use --template <slug> to apply a template
+```
+
+### Create Squad from Template
+
+```bash
+python -m backend.cli.apply_template \
+  --user-email demo@test.com \
+  --template software-dev-squad \
+  --squad-name "Alpha Development Team" \
+  --description "Main product development team"
+```
+
+This creates:
+- ✅ 1 Squad
+- ✅ 6 Agents (PM, Architect, Tech Lead, Backend Dev, Frontend Dev, QA)
+- ✅ 17 Routing Rules (complete escalation hierarchy)
+
+### Options
+
+```
+Options:
+  -l, --list                  List all available templates
+  -u, --user-email TEXT       Email of the user who will own the squad
+  -t, --template TEXT         Template slug (e.g., 'software-dev-squad')
+  -n, --squad-name TEXT       Name for the new squad
+  -d, --description TEXT      Description for the squad (optional)
+  --help                      Show help message
+```
+
+### Examples
+
+```bash
+# List templates
+python -m backend.cli.apply_template --list
+
+# Create dev squad with short flags
+python -m backend.cli.apply_template \
+  -u user@example.com \
+  -t software-dev-squad \
+  -n "Team Alpha"
+
+# Create with full description
+python -m backend.cli.apply_template \
+  --user-email user@example.com \
+  --template software-dev-squad \
+  --squad-name "Backend Services Team" \
+  --description "Team responsible for core API services"
+```
+
+## Quick Start (Message Streaming)
 
 ### 1. Get Your Auth Token
 
