@@ -1,0 +1,430 @@
+name: "Software Development Squad"
+slug: "software-dev-squad"
+description: "Complete development team with PM, developers, architects, and QA. Ideal for building features end-to-end with proper escalation hierarchy."
+category: "development"
+is_featured: true
+
+# Agent definitions
+agents:
+  - role: "project_manager"
+    specialization: "agile"
+    llm_provider: "anthropic"
+    llm_model: "claude-3-5-sonnet-20241022"
+    description: "Manages projects, breaks down features, coordinates team, removes blockers"
+
+  - role: "solution_architect"
+    specialization: "default"
+    llm_provider: "anthropic"
+    llm_model: "claude-3-5-sonnet-20241022"
+    description: "Designs system architecture, makes technology decisions, ensures scalability"
+
+  - role: "tech_lead"
+    specialization: "default"
+    llm_provider: "anthropic"
+    llm_model: "claude-3-5-sonnet-20241022"
+    description: "Guides developers, reviews code, makes technical decisions, mentors team"
+
+  - role: "backend_developer"
+    specialization: "python_fastapi"
+    llm_provider: "openai"
+    llm_model: "gpt-4"
+    description: "Implements backend features, APIs, database logic, integrations"
+
+  - role: "frontend_developer"
+    specialization: "react_typescript"
+    llm_provider: "openai"
+    llm_model: "gpt-4"
+    description: "Builds user interfaces, implements frontend features, ensures accessibility"
+
+  - role: "qa_tester"
+    specialization: "automation"
+    llm_provider: "openai"
+    llm_model: "gpt-4"
+    description: "Tests features, writes automation, ensures quality, documents bugs"
+
+# Routing rules - defines the escalation hierarchy
+routing_rules:
+  # Backend Developer routes
+  - asker_role: "backend_developer"
+    question_type: "implementation"
+    escalation_level: 0
+    responder_role: "tech_lead"
+    priority: 10
+    description: "Backend dev asks tech lead about implementation details"
+
+  - asker_role: "backend_developer"
+    question_type: "implementation"
+    escalation_level: 1
+    responder_role: "solution_architect"
+    priority: 10
+    description: "If tech lead doesn't respond, escalate to architect"
+
+  - asker_role: "backend_developer"
+    question_type: "implementation"
+    escalation_level: 2
+    responder_role: "project_manager"
+    priority: 10
+    description: "Final escalation to PM if architect doesn't respond"
+
+  - asker_role: "backend_developer"
+    question_type: "architecture"
+    escalation_level: 0
+    responder_role: "solution_architect"
+    priority: 10
+    description: "Architecture questions go directly to architect"
+
+  - asker_role: "backend_developer"
+    question_type: "code_review"
+    escalation_level: 0
+    responder_role: "tech_lead"
+    priority: 10
+    description: "Code reviews handled by tech lead"
+
+  # Frontend Developer routes
+  - asker_role: "frontend_developer"
+    question_type: "implementation"
+    escalation_level: 0
+    responder_role: "tech_lead"
+    priority: 10
+    description: "Frontend dev asks tech lead about implementation"
+
+  - asker_role: "frontend_developer"
+    question_type: "implementation"
+    escalation_level: 1
+    responder_role: "solution_architect"
+    priority: 10
+    description: "Escalate to architect if needed"
+
+  - asker_role: "frontend_developer"
+    question_type: "architecture"
+    escalation_level: 0
+    responder_role: "solution_architect"
+    priority: 10
+    description: "Architecture questions go to architect"
+
+  - asker_role: "frontend_developer"
+    question_type: "code_review"
+    escalation_level: 0
+    responder_role: "tech_lead"
+    priority: 10
+    description: "Code reviews by tech lead"
+
+  # Tech Lead routes
+  - asker_role: "tech_lead"
+    question_type: "architecture"
+    escalation_level: 0
+    responder_role: "solution_architect"
+    priority: 10
+    description: "Tech lead asks architect about architecture decisions"
+
+  - asker_role: "tech_lead"
+    question_type: "default"
+    escalation_level: 1
+    responder_role: "project_manager"
+    priority: 10
+    description: "Escalate to PM for business/priority questions"
+
+  # Solution Architect routes
+  - asker_role: "solution_architect"
+    question_type: "business_requirement"
+    escalation_level: 0
+    responder_role: "project_manager"
+    priority: 10
+    description: "Business questions go to PM"
+
+  - asker_role: "solution_architect"
+    question_type: "resource_allocation"
+    escalation_level: 0
+    responder_role: "project_manager"
+    priority: 10
+    description: "Resource questions to PM"
+
+  # QA Tester routes
+  - asker_role: "qa_tester"
+    question_type: "default"
+    escalation_level: 0
+    responder_role: "tech_lead"
+    priority: 10
+    description: "QA asks tech lead by default"
+
+  - asker_role: "qa_tester"
+    question_type: "bug_verification"
+    escalation_level: 0
+    responder_role: "tech_lead"
+    priority: 10
+    description: "Bug questions to tech lead"
+
+  - asker_role: "qa_tester"
+    question_type: "test_strategy"
+    escalation_level: 0
+    responder_role: "tech_lead"
+    priority: 10
+    description: "Test strategy with tech lead"
+
+  - asker_role: "qa_tester"
+    question_type: "default"
+    escalation_level: 1
+    responder_role: "solution_architect"
+    priority: 10
+    description: "Escalate to architect if tech lead unavailable"
+
+# Success metrics to track
+success_metrics:
+  - name: "Questions per Day"
+    target: 20
+    unit: "count"
+    description: "Number of questions handled by the squad daily"
+
+  - name: "Average Response Time"
+    target: 180
+    unit: "seconds"
+    description: "Mean time to first response from any agent"
+
+  - name: "Escalation Rate"
+    target: 15
+    unit: "percentage"
+    description: "Percentage of questions that escalate to higher level"
+
+  - name: "Resolution Rate"
+    target: 95
+    unit: "percentage"
+    description: "Percentage of questions successfully resolved"
+
+  - name: "Mean Time to Resolution"
+    target: 600
+    unit: "seconds"
+    description: "Average time from question to resolution"
+
+# Example conversations demonstrating the template
+example_conversations:
+  - title: "Caching Strategy Discussion"
+    description: "Backend developer asks about implementing caching - resolved by tech lead"
+    participants: ["backend_developer", "tech_lead"]
+    messages:
+      - from: "backend_developer"
+        to: "tech_lead"
+        content: "I'm implementing user session caching. Should I use Redis or Memcached? What's the best pattern for cache invalidation?"
+        type: "question"
+        question_type: "implementation"
+
+      - from: "tech_lead"
+        to: "backend_developer"
+        content: |
+          **Use Redis for session caching.**
+
+          **Why:** Redis supports richer data structures (hashes for sessions) and has persistence, which is crucial for sessions. Memcached only stores strings and doesn't persist data.
+
+          **Example:**
+          ```python
+          import redis
+          r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+
+          # Store session with 1 hour TTL
+          r.hset(f'session:{user_id}', mapping={
+              'username': 'john',
+              'role': 'admin',
+              'last_activity': datetime.now().isoformat()
+          })
+          r.expire(f'session:{user_id}', 3600)
+
+          # Retrieve session
+          session = r.hgetall(f'session:{user_id}')
+          ```
+
+          **Trade-offs:** Redis uses slightly more memory, but the feature set is worth it.
+
+          **Next Steps:** Set up Redis with connection pooling and configure TTL based on session expiry.
+        type: "answer"
+
+  - title: "Database Scaling Question - Escalation"
+    description: "Developer asks about scaling - tech lead escalates to solution architect"
+    participants: ["backend_developer", "tech_lead", "solution_architect"]
+    messages:
+      - from: "backend_developer"
+        to: "tech_lead"
+        content: "We're expecting 10M users next quarter. How should we scale the database? Current setup is single PostgreSQL instance."
+        type: "question"
+        question_type: "architecture"
+
+      - from: "tech_lead"
+        to: "solution_architect"
+        content: "Database scaling question for 10M users - this needs your architectural expertise. The backend dev is asking about our PostgreSQL scaling strategy."
+        type: "escalation"
+
+      - from: "solution_architect"
+        to: "backend_developer"
+        content: |
+          **Recommended Approach:** Implement a multi-tier scaling strategy starting with read replicas and caching.
+
+          **Architecture:**
+          1. **Redis Caching Layer** - Cache user profiles, session data (reduces DB load by 60-70%)
+          2. **Read Replicas (3-5)** - Route 80% of read traffic to replicas
+          3. **Connection Pooling** - PgBouncer to reduce connection overhead
+          4. **Sharding (if needed later)** - By user_id, only if single DB can't handle writes
+
+          **Trade-offs:**
+          - Read replicas are simple to implement
+          - Caching requires invalidation strategy
+          - Sharding adds complexity (last resort)
+
+          **Next Steps:**
+          1. Set up Redis caching for hot data (week 1)
+          2. Add 2 read replicas (week 2)
+          3. Implement PgBouncer (week 2)
+          4. Monitor performance for 1 month
+          5. Re-evaluate if writes become bottleneck
+
+          Want me to detail the caching strategy?
+        type: "answer"
+
+  - title: "API Contract Request"
+    description: "Frontend dev asks backend for API contract - cross-team collaboration"
+    participants: ["frontend_developer", "backend_developer"]
+    messages:
+      - from: "frontend_developer"
+        to: "backend_developer"
+        content: |
+          Working on the checkout payment step. Need the payment API contract.
+
+          **What I need:**
+          ```typescript
+          interface PaymentRequest {
+            amount: number;
+            currency: string;
+            paymentMethodId: string;
+            customerId: string;
+          }
+
+          interface PaymentResponse {
+            success: boolean;
+            transactionId?: string;
+            error?: {
+              code: string;
+              message: string;
+            };
+          }
+          ```
+
+          **Questions:**
+          1. What's the endpoint? POST /api/payments?
+          2. How do I handle 3D Secure redirects?
+          3. What's the expected response time? (for timeout handling)
+        type: "question"
+        question_type: "implementation"
+
+      - from: "backend_developer"
+        to: "frontend_developer"
+        content: |
+          **API Contract:**
+
+          **Endpoint:** `POST /api/v1/payments`
+
+          **Request:**
+          ```json
+          {
+            "amount": 1999,  // cents
+            "currency": "USD",
+            "paymentMethodId": "pm_1234...",
+            "customerId": "cus_5678..."
+          }
+          ```
+
+          **Response (Success):**
+          ```json
+          {
+            "success": true,
+            "transactionId": "txn_abc123",
+            "status": "succeeded"
+          }
+          ```
+
+          **Response (3D Secure Required):**
+          ```json
+          {
+            "success": false,
+            "requiresAction": true,
+            "redirectUrl": "https://stripe.com/3ds/...",
+            "transactionId": "txn_abc123"
+          }
+          ```
+
+          **Timing:**
+          - Normal: 1-2 seconds
+          - 3DS: Up to 5 seconds
+          - Timeout: Set to 10 seconds
+
+          **Error Codes:**
+          - `card_declined`: Show "Payment declined" message
+          - `insufficient_funds`: "Insufficient funds"
+          - `network_error`: "Please try again"
+
+          Will have this deployed to staging by EOD.
+        type: "answer"
+
+  - title: "QA Test Scenario Question"
+    description: "QA asks about test scenarios for a feature"
+    participants: ["qa_tester", "tech_lead"]
+    messages:
+      - from: "qa_tester"
+        to: "tech_lead"
+        content: "Testing the new password reset flow. What edge cases should I cover beyond the happy path?"
+        type: "question"
+        question_type: "test_strategy"
+
+      - from: "tech_lead"
+        to: "qa_tester"
+        content: |
+          **Critical Test Cases:**
+
+          **Input Validation:**
+          - Email doesn't exist in system
+          - Invalid email format
+          - Empty email field
+          - SQL injection attempts
+
+          **Token Security:**
+          - Expired token (>24 hours old)
+          - Already-used token
+          - Invalid token format
+          - Token for different user
+
+          **Password Requirements:**
+          - Too short (<8 characters)
+          - No special characters
+          - Same as old password
+          - Common passwords (password123)
+
+          **Rate Limiting:**
+          - 5 requests in 1 hour (should block)
+          - Distributed attempts from different IPs
+
+          **Edge Cases:**
+          - User deleted between reset request and completion
+          - Multiple reset requests for same user
+          - Browser back button after reset
+          - Mobile vs desktop flow
+
+          **Security:**
+          - Token in URL not logged
+          - Old sessions invalidated after reset
+          - Email sent to correct address
+
+          Priority: Start with token security and rate limiting - those are highest risk.
+        type: "answer"
+
+# Use cases for this template
+use_cases:
+  - "Feature development teams (5-10 people)"
+  - "Startup engineering teams building MVPs"
+  - "Agile development squads"
+  - "Product teams with cross-functional needs"
+  - "Teams needing clear escalation paths"
+
+# Tags for discovery
+tags:
+  - "development"
+  - "agile"
+  - "full-stack"
+  - "engineering"
+  - "scrum"
+  - "product-development"

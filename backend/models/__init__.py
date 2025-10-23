@@ -8,6 +8,7 @@ from backend.models.project import Project, Task, TaskExecution
 from backend.models.message import AgentMessage
 from backend.models.conversation import Conversation, ConversationEvent, ConversationState
 from backend.models.routing_rule import RoutingRule, DefaultRoutingTemplate
+from backend.models.squad_template import SquadTemplate
 from backend.models.feedback import Feedback, LearningInsight
 from backend.models.integration import Integration, Webhook
 from backend.models.billing import Subscription, UsageMetrics
@@ -28,6 +29,7 @@ __all__ = [
     "ConversationState",
     "RoutingRule",
     "DefaultRoutingTemplate",
+    "SquadTemplate",
     "Feedback",
     "LearningInsight",
     "Integration",

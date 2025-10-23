@@ -68,7 +68,18 @@
       "Bash(backend/.venv/bin/pip list:*)",
       "Bash(.venv/bin/pip:*)",
       "Bash(PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad python test_celery_timeout.py)",
-      "Bash(PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad MESSAGE_BUS=nats NATS_URL=nats://localhost:4222 uv run python:*)"
+      "Bash(PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad MESSAGE_BUS=nats NATS_URL=nats://localhost:4222 uv run python:*)",
+      "Bash(PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad backend/.venv/bin/alembic revision:*)",
+      "Bash(backend/.venv/bin/pip install pyyaml)",
+      "Bash(PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad .venv/bin/python apply_template_quick.py:*)",
+      "Bash(PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad backend/.venv/bin/python apply_template_quick.py)",
+      "Bash(backend/.venv/bin/alembic upgrade head)",
+      "Bash(.venv/bin/alembic upgrade:*)",
+      "Bash(PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad .venv/bin/alembic upgrade:*)",
+      "Bash(PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad .venv/bin/alembic current:*)",
+      "Bash(PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad .venv/bin/alembic history)",
+      "Bash(PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad backend/.venv/bin/python:*)",
+      "Bash(PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad .venv/bin/python:*)"
     ],
     "deny": [],
     "ask": []

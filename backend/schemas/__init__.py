@@ -100,6 +100,21 @@ from backend.schemas.routing_rule import (
     ValidateRoutingConfigRequest,
     ValidateRoutingConfigResponse,
 )
+from backend.schemas.template import (
+    TemplateListResponse,
+    TemplateDetailResponse,
+    AgentDefinition,
+    RoutingRuleDefinition as TemplateRoutingRuleDefinition,
+    SuccessMetric,
+    ExampleConversation,
+    TemplateDefinition,
+    ApplyTemplateRequest as TemplateApplyRequest,
+    ApplyTemplateResponse as TemplateApplyResponse,
+    CreateTemplateRequest,
+    UpdateTemplateRequest,
+    CreatedAgent,
+    CreatedRoutingRule,
+)
 
 __all__ = [
     # Auth schemas
@@ -192,4 +207,18 @@ __all__ = [
     "RoutingRuleStats",
     "ValidateRoutingConfigRequest",
     "ValidateRoutingConfigResponse",
+    # Template schemas
+    "TemplateListResponse",
+    "TemplateDetailResponse",
+    "AgentDefinition",
+    "TemplateRoutingRuleDefinition",
+    "SuccessMetric",
+    "ExampleConversation",
+    "TemplateDefinition",
+    "TemplateApplyRequest",
+    "TemplateApplyResponse",
+    "CreateTemplateRequest",
+    "UpdateTemplateRequest",
+    "CreatedAgent",
+    "CreatedRoutingRule",
 ]
