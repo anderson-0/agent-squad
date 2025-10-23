@@ -83,8 +83,11 @@ class Settings(BaseSettings):
     ENABLE_CLI: bool = False
     ENABLE_WEBHOOKS: bool = True
 
+    # Agent Framework Configuration
+    USE_AGNO_AGENTS: bool = True  # Use Agno (enterprise) or Custom (legacy) agents
+
     # Message Bus Configuration
-    MESSAGE_BUS: str = "memory"  # Options: "memory" or "nats"
+    MESSAGE_BUS: str = "nats"  # Options: "memory" or "nats" (default: nats for production)
     NATS_URL: str = "nats://localhost:4222"
     NATS_STREAM_NAME: str = "agent-messages"
     NATS_MAX_MSGS: int = 1_000_000  # 1M messages

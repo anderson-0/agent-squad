@@ -192,6 +192,7 @@ class NATSMessageBus:
         message_type: str,
         metadata: Optional[Dict[str, Any]] = None,
         task_execution_id: Optional[UUID] = None,
+        conversation_id: Optional[UUID] = None,
         db: Optional[AsyncSession] = None,
     ) -> AgentMessageResponse:
         """
@@ -204,6 +205,7 @@ class NATSMessageBus:
             message_type: Type of message (task_assignment, status_update, etc.)
             metadata: Optional metadata
             task_execution_id: Optional task execution context
+            conversation_id: Optional conversation context
             db: Optional database session for enriched metadata
 
         Returns:
