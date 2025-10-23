@@ -79,7 +79,9 @@
       "Bash(PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad .venv/bin/alembic current:*)",
       "Bash(PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad .venv/bin/alembic history)",
       "Bash(PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad backend/.venv/bin/python:*)",
-      "Bash(PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad .venv/bin/python:*)"
+      "Bash(PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad .venv/bin/python:*)",
+      "Bash(git checkout:*)",
+      "Bash(DEBUG=False PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad backend/.venv/bin/python demo_template_squad_conversations.py)"
     ],
     "deny": [],
     "ask": []

@@ -147,7 +147,7 @@ class TemplateService:
                 specialization=agent_def.get('specialization'),
                 llm_provider=agent_def.get('llm_provider', 'openai'),
                 llm_model=agent_def.get('llm_model', 'gpt-4'),
-                custom_system_prompt=None  # Will load from roles/ directory
+                config=agent_def.get('config', {})
             )
             created_agents.append(agent)
 
