@@ -84,7 +84,12 @@
       "Bash(DEBUG=False PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad backend/.venv/bin/python demo_template_squad_conversations.py)",
       "Bash(DEBUG=False PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad backend/.venv/bin/python demo_template_system.py)",
       "Bash(DEBUG=False PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad backend/.venv/bin/python -m backend.cli.apply_template --list)",
-      "Bash(DEBUG=False PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad backend/.venv/bin/python -m backend.cli.apply_template:*)"
+      "Bash(DEBUG=False PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad backend/.venv/bin/python -m backend.cli.apply_template:*)",
+      "Bash(DEBUG=False PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad backend/.venv/bin/python test_mvp_e2e.py)",
+      "Bash(PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad .venv/bin/alembic revision:*)",
+      "Bash(PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad backend/.venv/bin/alembic -c backend/alembic.ini upgrade head:*)",
+      "Bash(PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad .venv/bin/alembic -c backend/alembic.ini upgrade head:*)",
+      "Bash(DEBUG=False PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad .venv/bin/python ../test_mvp_e2e.py)"
     ],
     "deny": [],
     "ask": []

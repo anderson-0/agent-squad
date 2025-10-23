@@ -17,7 +17,7 @@ class AgentMessage(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     task_execution_id = Column(
-        UUID(as_uuid=True), ForeignKey("task_executions.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True), ForeignKey("task_executions.id", ondelete="CASCADE"), nullable=True
     )
     sender_id = Column(UUID(as_uuid=True), ForeignKey("squad_members.id", ondelete="CASCADE"), nullable=False)
     recipient_id = Column(

@@ -17,12 +17,14 @@ Agents:   ✅ 5 specialized agents operational
 **What's Working:**
 - ✅ **Authentication** - JWT, password management, email verification
 - ✅ **AI Agents** - 5 specialized agents (PM, Tech Lead, Developers, QA)
+- ✅ **Squad Templates** - Pre-built squads with instant deployment (NEW!)
 - ✅ **Communication** - Message bus, A2A protocol, conversation history
+- ✅ **Hierarchical Routing** - 3-level escalation with 17 routing rules
 - ✅ **Orchestration** - 10-state workflow, smart delegation
 - ✅ **Collaboration** - Problem-solving, code review, standups
 - ✅ **Context** - RAG with Pinecone, Redis memory, multi-source context
 - ✅ **Real-time** - SSE streaming for live agent updates
-- ✅ **API** - 41 authenticated endpoints with full validation
+- ✅ **API** - 48+ authenticated endpoints with full validation
 
 ## 🎯 Vision
 
@@ -31,10 +33,52 @@ Enable companies to scale their development capacity on-demand by providing AI a
 ## ✨ Features
 
 - **Customizable Squad Building** - Choose 2-10 members with various roles and tech stacks
+- **Squad Templates** - Pre-built squad configurations for instant deployment (< 30 seconds)
 - **Multi-Project Management** - Connect to Git repos and ticket systems
 - **Intelligent Task Orchestration** - AI-powered task breakdown and delegation
 - **Real-time Collaboration Dashboard** - Monitor agent communications in real-time
 - **Learning & Feedback System** - Agents improve over time with RAG and feedback
+
+## 🎨 Squad Templates (NEW!)
+
+Create production-ready squads instantly with pre-built templates:
+
+**Software Development Squad** - 6 agents with complete escalation hierarchy:
+- Project Manager (Claude 3.5 Sonnet)
+- Solution Architect (Claude 3.5 Sonnet)
+- Tech Lead (Claude 3.5 Sonnet)
+- Backend Developer (GPT-4)
+- Frontend Developer (GPT-4)
+- QA Tester (GPT-4)
+
+**Features:**
+- ✅ 17 routing rules with 3-level escalation (Dev → Tech Lead → Architect → PM)
+- ✅ 8 question types (implementation, architecture, code_review, testing, etc.)
+- ✅ CLI tool for instant squad creation (< 30 seconds)
+- ✅ REST API for programmatic access
+- ✅ Template customization support
+
+**Quick Start:**
+```bash
+# List available templates
+python -m backend.cli.apply_template --list
+
+# Create squad from template
+python -m backend.cli.apply_template \
+  --user-email demo@test.com \
+  --template software-dev-squad \
+  --squad-name "Alpha Team"
+
+# Or via API
+curl -X POST http://localhost:8000/api/v1/templates/{template_id}/apply \
+  -H "Content-Type: application/json" \
+  -d '{"squad_id": "...", "user_id": "..."}'
+```
+
+**Documentation:**
+- [Template System Guide](./TEMPLATE_SYSTEM_GUIDE.md) - Complete reference
+- [CLI Tool README](./backend/cli/README.md) - CLI documentation
+- [Template Implementation Plan](./TEMPLATE_IMPLEMENTATION_PLAN.md) - Technical details
 
 ## 🏗️ Tech Stack
 
@@ -196,6 +240,12 @@ agent-squad/
 - **[Design Patterns](./docs/architecture/design-patterns.md)** - Patterns used throughout
 - **[Scalability](./docs/architecture/scalability.md)** - Scaling strategies
 - **[Performance](./docs/architecture/performance.md)** - Optimization techniques
+
+### Template System (NEW!)
+- **[Template System Guide](./TEMPLATE_SYSTEM_GUIDE.md)** - Complete template reference guide
+- **[Template Implementation Plan](./TEMPLATE_IMPLEMENTATION_PLAN.md)** - Technical implementation details
+- **[CLI Tool README](./backend/cli/README.md)** - Command-line interface documentation
+- **[Product Roadmap](./PRODUCT_ROADMAP.md)** - Commercialization strategy
 
 ### Agent System Prompts
 

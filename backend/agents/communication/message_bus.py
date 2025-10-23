@@ -105,7 +105,7 @@ class MessageBus:
             )
 
             # Persist to database if db session provided
-            if db is not None and task_execution_id is not None:
+            if db is not None:
                 try:
                     db_message = AgentMessage(
                         id=message_id,
