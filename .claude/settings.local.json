@@ -97,7 +97,8 @@
       "Bash(DEBUG=False PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad backend/.venv/bin/python test_sse_streaming_e2e.py)",
       "Bash(PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad ../.venv/bin/alembic upgrade head)",
       "Bash(PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad /Users/anderson/Documents/anderson-0/agent-squad/.venv/bin/alembic upgrade head)",
-      "Bash(PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad backend/.venv/bin/alembic upgrade:*)"
+      "Bash(PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad backend/.venv/bin/alembic upgrade:*)",
+      "Bash(PYTHONPATH=$PWD backend/.venv/bin/python:*)"
     ],
     "deny": [],
     "ask": []

@@ -13,6 +13,11 @@ from backend.models.feedback import Feedback, LearningInsight
 from backend.models.integration import Integration, Webhook
 from backend.models.billing import Subscription, UsageMetrics
 from backend.models.squad_member_stats import SquadMemberStats
+from backend.models.multi_turn_conversation import (
+    MultiTurnConversation,
+    ConversationMessage,
+    ConversationParticipant
+)
 
 __all__ = [
     "Base",
@@ -38,4 +43,7 @@ __all__ = [
     "Subscription",
     "UsageMetrics",
     "SquadMemberStats",
+    "MultiTurnConversation",
+    "ConversationMessage",
+    "ConversationParticipant",
 ]

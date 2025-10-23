@@ -65,6 +65,11 @@ class SquadMember(Base, TimestampMixin):
         foreign_keys="AgentMessage.recipient_id",
         back_populates="recipient"
     )
+    multi_turn_conversations = relationship(
+        "MultiTurnConversation",
+        back_populates="primary_responder",
+        foreign_keys="MultiTurnConversation.primary_responder_id"
+    )
 
     __table_args__ = (
         Index("ix_squad_members_squad_id", "squad_id"),

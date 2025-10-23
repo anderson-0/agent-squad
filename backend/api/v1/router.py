@@ -14,6 +14,7 @@ from backend.api.v1.endpoints import (
     conversations,
     templates,
     analytics,
+    multi_turn_conversations,
 )
 
 
@@ -31,6 +32,7 @@ api_router.include_router(routing_rules.router)
 api_router.include_router(conversations.router)
 api_router.include_router(templates.router)
 api_router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
+api_router.include_router(multi_turn_conversations.router, prefix="/multi-turn-conversations", tags=["multi-turn-conversations"])
 
 # Future routers will be added here:
 # api_router.include_router(projects.router)

@@ -27,6 +27,7 @@ class User(Base, TimestampMixin):
     organizations = relationship("Organization", back_populates="owner", cascade="all, delete-orphan")
     squads = relationship("Squad", back_populates="user", cascade="all, delete-orphan")
     feedback = relationship("Feedback", back_populates="user", cascade="all, delete-orphan")
+    multi_turn_conversations = relationship("MultiTurnConversation", back_populates="user", cascade="all, delete-orphan")
 
 
 class Organization(Base, TimestampMixin):
