@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.models.message import AgentMessage
 from backend.schemas.agent_message import AgentMessageResponse
-from backend.agents.base_agent import ConversationMessage
+from backend.agents.agno_base import ConversationMessage
 
 
 class HistoryManager:

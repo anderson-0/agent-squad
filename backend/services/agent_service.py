@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from backend.models.squad import Squad, SquadMember
-from backend.agents.base_agent import BaseSquadAgent, AgentConfig
+from backend.agents.agno_base import AgnoSquadAgent
 from backend.agents.factory import AgentFactory
 
 
@@ -178,18 +178,18 @@ class AgentService:
     async def get_or_create_agent(
         db: AsyncSession,
         squad_member_id: UUID,
-    ) -> BaseSquadAgent:
+    ) -> AgnoSquadAgent:
         """
         Get or create an agent instance for a squad member.
 
-        This initializes the BaseSquadAgent with the member's configuration.
+        This initializes the AgnoSquadAgent with the member's configuration.
 
         Args:
             db: Database session
             squad_member_id: Squad member UUID
 
         Returns:
-            Initialized agent instance
+            Initialized Agno agent instance
 
         Raises:
             HTTPException: If squad member not found
@@ -209,20 +209,22 @@ class AgentService:
                 detail=f"Squad member {squad_member_id} is not active"
             )
 
-        # Create agent configuration
-        agent_config = AgentConfig(
+        # Extract temperature from config (default: 0.7)
+        temperature = squad_member.config.get("temperature", 0.7) if squad_member.config else 0.7
+        max_tokens = squad_member.config.get("max_tokens") if squad_member.config else None
+
+        # Create agent using factory (Agno-based)
+        agent = AgentFactory.create_agent(
             agent_id=squad_member.id,
-            squad_id=squad_member.squad_id,
             role=squad_member.role,
             specialization=squad_member.specialization,
             llm_provider=squad_member.llm_provider,
             llm_model=squad_member.llm_model,
+            temperature=temperature,
+            max_tokens=max_tokens,
             system_prompt=squad_member.system_prompt,
-            config=squad_member.config,
+            session_id=None,  # New session for each creation
         )
-
-        # Create agent using factory
-        agent = AgentFactory.create_agent(agent_config)
 
         return agent
 

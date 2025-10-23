@@ -84,7 +84,7 @@ class Settings(BaseSettings):
     ENABLE_WEBHOOKS: bool = True
 
     # Agent Framework Configuration
-    USE_AGNO_AGENTS: bool = True  # Use Agno (enterprise) or Custom (legacy) agents
+    USE_AGNO_AGENTS: bool = True  # Deprecated: Agno is now the only agent implementation
 
     # Message Bus Configuration
     MESSAGE_BUS: str = "nats"  # Options: "memory" or "nats" (default: nats for production)

@@ -16,7 +16,6 @@ from uuid import uuid4
 
 # Set production configuration
 os.environ['MESSAGE_BUS'] = 'nats'
-os.environ['USE_AGNO_AGENTS'] = 'true'
 os.environ['NATS_URL'] = 'nats://localhost:4222'
 
 from backend.agents.factory import AgentFactory

@@ -2,7 +2,7 @@
 """
 Phase 2 Context Enhancement Test
 
-Tests the improved context handling in BaseAgent:
+Tests the improved context handling in AgnoSquadAgent:
 - Role-specific prompts
 - Question type awareness
 - Escalation handling
@@ -13,10 +13,10 @@ Run:
 """
 from uuid import uuid4
 
-from backend.agents.base_agent import AgentConfig, BaseSquadAgent
+from backend.agents.agno_base import AgentConfig, AgnoSquadAgent
 
 
-class TestAgent(BaseSquadAgent):
+class TestAgent(AgnoSquadAgent):
     """Simple test agent for demonstration"""
     def get_capabilities(self):
         return ["test_capability"]
@@ -53,7 +53,7 @@ def test_contextual_prompts():
         system_prompt="You are a helpful technical lead."
     )
 
-    agent = TestAgent(config=config, mcp_client=None)
+    agent = TestAgent(config=config, agent_id=uuid4())
 
     # ================================================================
     # Test 1: Basic Prompt (No Context)

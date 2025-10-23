@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Test MCP Tool Integration with BaseSquadAgent (Day 4)
+Test MCP Tool Integration with AgnoSquadAgent (Day 4)
 
-This script tests the new MCP tool integration features added to BaseSquadAgent:
+This script tests the new MCP tool integration features added to AgnoSquadAgent:
 - Tool discovery
 - Tool execution
 - Tool-aware prompt generation
@@ -16,16 +16,12 @@ import os
 # Add backend to path
 sys.path.insert(0, '/workspace/backend')
 
-from backend.agents.base_agent import (
-    BaseSquadAgent,
-    AgentConfig,
-    ToolCall,
-    ToolResult
-)
+from backend.agents.agno_base import AgnoSquadAgent, AgentConfig
 from backend.integrations.mcp.client import MCPClientManager
+from uuid import uuid4
 
 
-class TestAgent(BaseSquadAgent):
+class TestAgent(AgnoSquadAgent):
     """Simple test agent for MCP integration testing"""
 
     def get_capabilities(self) -> list:
@@ -33,10 +29,10 @@ class TestAgent(BaseSquadAgent):
 
 
 async def test_mcp_agent_integration():
-    """Test the complete MCP integration with BaseSquadAgent"""
+    """Test the complete MCP integration with AgnoSquadAgent"""
 
     print("=" * 80)
-    print("🧪 Testing MCP Integration with BaseSquadAgent (Day 4)")
+    print("🧪 Testing MCP Integration with AgnoSquadAgent (Day 4)")
     print("=" * 80)
     print()
 
@@ -53,7 +49,7 @@ async def test_mcp_agent_integration():
             system_prompt="You are a test agent."
         )
 
-        agent_no_mcp = TestAgent(config)
+        agent_no_mcp = TestAgent(config=config, agent_id=uuid4())
         print(f"✅ Agent created: {agent_no_mcp}")
         print(f"   Has MCP client: {agent_no_mcp.has_mcp_client()}")
         print(f"   Available tools: {len(agent_no_mcp.get_available_tools())}")
@@ -94,7 +90,7 @@ async def test_mcp_agent_integration():
     print("📊 Test 3: Create agent with MCP client")
     print("=" * 80)
     try:
-        agent_with_mcp = TestAgent(config, mcp_client=mcp_client)
+        agent_with_mcp = TestAgent(config=config, agent_id=uuid4(), mcp_client=mcp_client)
         print(f"✅ Agent with MCP created: {agent_with_mcp}")
         print(f"   Has MCP client: {agent_with_mcp.has_mcp_client()}")
 
@@ -288,7 +284,7 @@ async def test_mcp_agent_integration():
     print("=" * 80)
     print()
     print("Summary of Day 4 Implementation:")
-    print("  ✅ BaseSquadAgent accepts mcp_client parameter")
+    print("  ✅ AgnoSquadAgent accepts mcp_client parameter")
     print("  ✅ Tool discovery (get_available_tools)")
     print("  ✅ Direct tool execution (execute_tool)")
     print("  ✅ Tool execution history tracking")
@@ -296,7 +292,7 @@ async def test_mcp_agent_integration():
     print("  ✅ Tool call parsing from LLM responses")
     print("  ✅ System prompt enhancement with tool info")
     print()
-    print("🎉 BaseSquadAgent now supports MCP tool integration!")
+    print("🎉 AgnoSquadAgent now supports MCP tool integration!")
     print()
 
 

@@ -14,7 +14,6 @@ from datetime import datetime
 
 # Set environment to use NATS and Agno
 os.environ['MESSAGE_BUS'] = 'nats'
-os.environ['USE_AGNO_AGENTS'] = 'true'
 os.environ['NATS_URL'] = 'nats://localhost:4222'
 
 from backend.agents.factory import AgentFactory
