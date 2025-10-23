@@ -9,7 +9,8 @@ Shows the new template features:
 4. Verifying squad setup (agents + routing rules)
 
 Run:
-    python demo_template_system.py
+    DEBUG=False python demo_template_system.py  # Clean output without SQL logs
+    python demo_template_system.py              # With SQL debug logs
 """
 import logging
 

@@ -10,7 +10,8 @@ Shows that hierarchical conversations work with template-created squads:
 5. Verify routing engine works correctly
 
 Run:
-    python demo_template_squad_conversations.py
+    DEBUG=False python demo_template_squad_conversations.py  # Clean output without SQL logs
+    python demo_template_squad_conversations.py              # With SQL debug logs
 """
 import logging
 
