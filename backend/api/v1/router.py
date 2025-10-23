@@ -13,6 +13,7 @@ from backend.api.v1.endpoints import (
     routing_rules,
     conversations,
     templates,
+    analytics,
 )
 
 
@@ -29,6 +30,7 @@ api_router.include_router(sse.router)
 api_router.include_router(routing_rules.router)
 api_router.include_router(conversations.router)
 api_router.include_router(templates.router)
+api_router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
 
 # Future routers will be added here:
 # api_router.include_router(projects.router)

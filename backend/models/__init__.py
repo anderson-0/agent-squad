@@ -12,6 +12,7 @@ from backend.models.squad_template import SquadTemplate
 from backend.models.feedback import Feedback, LearningInsight
 from backend.models.integration import Integration, Webhook
 from backend.models.billing import Subscription, UsageMetrics
+from backend.models.squad_member_stats import SquadMemberStats
 
 __all__ = [
     "Base",
@@ -36,4 +37,5 @@ __all__ = [
     "Webhook",
     "Subscription",
     "UsageMetrics",
+    "SquadMemberStats",
 ]
