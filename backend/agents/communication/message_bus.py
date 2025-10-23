@@ -71,6 +71,7 @@ class MessageBus:
         message_type: str,
         metadata: Optional[Dict[str, Any]] = None,
         task_execution_id: Optional[UUID] = None,
+        conversation_id: Optional[UUID] = None,
         db: Optional[AsyncSession] = None,
     ) -> AgentMessageResponse:
         """
@@ -83,6 +84,7 @@ class MessageBus:
             message_type: Type of message (task_assignment, status_update, etc.)
             metadata: Optional metadata
             task_execution_id: Optional task execution context
+            conversation_id: Optional conversation context
             db: Optional database session for enriched metadata (agent names, roles)
 
         Returns:
@@ -114,7 +116,8 @@ class MessageBus:
                         recipient_id=recipient_id,
                         content=content,
                         message_type=message_type,
-                        message_metadata=metadata or {}
+                        message_metadata=metadata or {},
+                        conversation_id=conversation_id
                     )
                     db.add(db_message)
                     await db.flush()

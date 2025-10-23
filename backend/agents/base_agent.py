@@ -10,6 +10,7 @@ from abc import ABC, abstractmethod
 import json
 from pathlib import Path
 import logging
+import asyncio
 
 from pydantic import BaseModel
 
@@ -171,6 +172,43 @@ class BaseSquadAgent(ABC):
 
         return response
 
+    async def process_message_streaming(
+        self,
+        message: str,
+        context: Optional[Dict[str, Any]] = None,
+        conversation_history: Optional[List[ConversationMessage]] = None,
+        on_token: Optional[callable] = None
+    ) -> AgentResponse:
+        """
+        Process a message with streaming response support.
+
+        Args:
+            message: The user message to process
+            context: Additional context
+            conversation_history: Optional conversation history
+            on_token: Callback function called for each token (str) -> None
+
+        Returns:
+            AgentResponse with complete content
+        """
+        # Use provided history or internal history
+        history = conversation_history if conversation_history is not None else self.conversation_history
+
+        # Build messages for LLM
+        messages = self._build_messages(message, context, history)
+
+        # Call appropriate LLM with streaming
+        response = await self._call_llm_streaming(messages, on_token)
+
+        # Update conversation history
+        if conversation_history is None:
+            self.conversation_history.append(ConversationMessage(role="user", content=message))
+            self.conversation_history.append(
+                ConversationMessage(role="assistant", content=response.content)
+            )
+
+        return response
+
     async def _call_llm(self, messages: List[Dict[str, str]]) -> AgentResponse:
         """Call the configured LLM provider"""
         if self.config.llm_provider == "openai":
@@ -179,6 +217,21 @@ class BaseSquadAgent(ABC):
             return await self._call_anthropic(messages)
         elif self.config.llm_provider == "groq":
             return await self._call_groq(messages)
+        else:
+            raise ValueError(f"Unsupported provider: {self.config.llm_provider}")
+
+    async def _call_llm_streaming(
+        self,
+        messages: List[Dict[str, str]],
+        on_token: Optional[callable] = None
+    ) -> AgentResponse:
+        """Call the configured LLM provider with streaming support"""
+        if self.config.llm_provider == "openai":
+            return await self._call_openai_streaming(messages, on_token)
+        elif self.config.llm_provider == "anthropic":
+            return await self._call_anthropic_streaming(messages, on_token)
+        elif self.config.llm_provider == "groq":
+            return await self._call_groq_streaming(messages, on_token)
         else:
             raise ValueError(f"Unsupported provider: {self.config.llm_provider}")
 
@@ -261,6 +314,179 @@ class BaseSquadAgent(ABC):
             metadata={
                 "model": response.model,
                 "finish_reason": response.choices[0].finish_reason,
+                "usage": self.token_usage.copy()
+            }
+        )
+
+    # ===== Streaming Methods =====
+
+    async def _call_openai_streaming(
+        self,
+        messages: List[Dict[str, str]],
+        on_token: Optional[callable] = None
+    ) -> AgentResponse:
+        """Call OpenAI API with streaming support"""
+        full_response = ""
+        finish_reason = None
+        model_name = None
+
+        stream = await self.llm_client.chat.completions.create(
+            model=self.config.llm_model,
+            messages=messages,
+            temperature=self.config.temperature,
+            max_tokens=self.config.max_tokens,
+            stream=True
+        )
+
+        async for chunk in stream:
+            if chunk.choices and len(chunk.choices) > 0:
+                delta = chunk.choices[0].delta
+
+                # Get token if available
+                if hasattr(delta, 'content') and delta.content:
+                    token = delta.content
+                    full_response += token
+
+                    # Call callback if provided
+                    if on_token:
+                        try:
+                            if asyncio.iscoroutinefunction(on_token):
+                                await on_token(token)
+                            else:
+                                on_token(token)
+                        except Exception as e:
+                            logger.error(f"Error in on_token callback: {e}")
+
+                # Get finish reason
+                if hasattr(chunk.choices[0], 'finish_reason') and chunk.choices[0].finish_reason:
+                    finish_reason = chunk.choices[0].finish_reason
+
+            # Get model name
+            if hasattr(chunk, 'model'):
+                model_name = chunk.model
+
+        # Note: Token usage not available in streaming mode for OpenAI
+        # Would need to estimate or make separate API call
+
+        return AgentResponse(
+            content=full_response,
+            metadata={
+                "model": model_name or self.config.llm_model,
+                "finish_reason": finish_reason,
+                "streaming": True,
+                "usage": self.token_usage.copy()
+            }
+        )
+
+    async def _call_anthropic_streaming(
+        self,
+        messages: List[Dict[str, str]],
+        on_token: Optional[callable] = None
+    ) -> AgentResponse:
+        """Call Anthropic Claude API with streaming support"""
+        # Anthropic requires system message to be separate
+        system_message = next((m["content"] for m in messages if m["role"] == "system"), "")
+        conversation_messages = [m for m in messages if m["role"] != "system"]
+
+        full_response = ""
+        stop_reason = None
+        input_tokens = 0
+        output_tokens = 0
+
+        async with self.llm_client.messages.stream(
+            model=self.config.llm_model,
+            max_tokens=self.config.max_tokens or 4096,
+            temperature=self.config.temperature,
+            system=system_message,
+            messages=conversation_messages
+        ) as stream:
+            async for text in stream.text_stream:
+                full_response += text
+
+                # Call callback if provided
+                if on_token:
+                    try:
+                        if asyncio.iscoroutinefunction(on_token):
+                            await on_token(text)
+                        else:
+                            on_token(text)
+                    except Exception as e:
+                        logger.error(f"Error in on_token callback: {e}")
+
+            # Get final message to extract usage
+            final_message = await stream.get_final_message()
+            if final_message:
+                stop_reason = final_message.stop_reason
+                if hasattr(final_message, 'usage'):
+                    input_tokens = final_message.usage.input_tokens
+                    output_tokens = final_message.usage.output_tokens
+
+        # Update token usage
+        self.token_usage["prompt_tokens"] += input_tokens
+        self.token_usage["completion_tokens"] += output_tokens
+        self.token_usage["total_tokens"] += input_tokens + output_tokens
+
+        return AgentResponse(
+            content=full_response,
+            metadata={
+                "model": self.config.llm_model,
+                "stop_reason": stop_reason,
+                "streaming": True,
+                "usage": self.token_usage.copy()
+            }
+        )
+
+    async def _call_groq_streaming(
+        self,
+        messages: List[Dict[str, str]],
+        on_token: Optional[callable] = None
+    ) -> AgentResponse:
+        """Call Groq API with streaming support (OpenAI-compatible)"""
+        full_response = ""
+        finish_reason = None
+        model_name = None
+
+        stream = await self.llm_client.chat.completions.create(
+            model=self.config.llm_model,
+            messages=messages,
+            temperature=self.config.temperature,
+            max_tokens=self.config.max_tokens,
+            stream=True
+        )
+
+        async for chunk in stream:
+            if chunk.choices and len(chunk.choices) > 0:
+                delta = chunk.choices[0].delta
+
+                # Get token if available
+                if hasattr(delta, 'content') and delta.content:
+                    token = delta.content
+                    full_response += token
+
+                    # Call callback if provided
+                    if on_token:
+                        try:
+                            if asyncio.iscoroutinefunction(on_token):
+                                await on_token(token)
+                            else:
+                                on_token(token)
+                        except Exception as e:
+                            logger.error(f"Error in on_token callback: {e}")
+
+                # Get finish reason
+                if hasattr(chunk.choices[0], 'finish_reason') and chunk.choices[0].finish_reason:
+                    finish_reason = chunk.choices[0].finish_reason
+
+            # Get model name
+            if hasattr(chunk, 'model'):
+                model_name = chunk.model
+
+        return AgentResponse(
+            content=full_response,
+            metadata={
+                "model": model_name or self.config.llm_model,
+                "finish_reason": finish_reason,
+                "streaming": True,
                 "usage": self.token_usage.copy()
             }
         )
@@ -416,27 +642,102 @@ class BaseSquadAgent(ABC):
 
         return "\n".join(tool_descriptions)
 
+    def _build_contextual_prompt(self, context: Optional[Dict[str, Any]] = None) -> str:
+        """
+        Build system prompt enhanced with conversation context.
+
+        This method creates a more intelligent, role-aware system prompt by:
+        - Including the agent's role and specialization
+        - Adding question type awareness
+        - Noting escalation level (if escalated from lower levels)
+        - Formatting context naturally for better LLM understanding
+
+        Args:
+            context: Context dictionary from conversation
+
+        Returns:
+            Enhanced system prompt string
+        """
+        prompt_parts = [self.config.system_prompt]
+
+        if not context:
+            return self.config.system_prompt
+
+        # Add role-specific context
+        agent_role = context.get("agent_role")
+        agent_specialization = context.get("agent_specialization")
+
+        if agent_role:
+            prompt_parts.append(f"\n## Your Role\nYou are a {agent_role.replace('_', ' ').title()}")
+            if agent_specialization and agent_specialization != "default":
+                prompt_parts.append(f" specialized in {agent_specialization}")
+            prompt_parts.append(".")
+
+        # Add question type context
+        question_type = context.get("question_type")
+        if question_type:
+            type_guidance = {
+                "implementation": "Focus on practical implementation details, code examples, and best practices.",
+                "architecture": "Focus on system design, scalability, trade-offs, and architectural patterns.",
+                "debugging": "Focus on identifying issues, root cause analysis, and debugging strategies.",
+                "review": "Focus on code quality, potential bugs, performance, and maintainability.",
+                "general": "Provide clear, concise answers appropriate to the question."
+            }
+            guidance = type_guidance.get(question_type, type_guidance["general"])
+            prompt_parts.append(f"\n## Question Type: {question_type.title()}\n{guidance}")
+
+        # Add escalation context
+        escalation_level = context.get("escalation_level", 0)
+        if escalation_level > 0:
+            prompt_parts.append(
+                f"\n## Important: Escalated Question (Level {escalation_level})\n"
+                "This question was escalated to you because previous responders needed "
+                "higher-level expertise. Provide authoritative, expert-level guidance. "
+                "If you're uncertain, be honest about limitations rather than guessing."
+            )
+
+        # Add conversation state context
+        conversation_state = context.get("conversation_state")
+        if conversation_state:
+            prompt_parts.append(f"\n## Conversation State: {conversation_state}")
+
+        # Add conversation events context (for multi-turn awareness)
+        conversation_events = context.get("conversation_events", [])
+        if conversation_events and len(conversation_events) > 0:
+            prompt_parts.append(
+                f"\n## Conversation History\n"
+                f"This is part of an ongoing conversation with {len(conversation_events)} previous event(s). "
+                "Keep the conversation context in mind when responding."
+            )
+
+        # Add any additional relevant context (but format it better than raw JSON)
+        conversation_metadata = context.get("conversation_metadata", {})
+        if conversation_metadata:
+            relevant_metadata = {k: v for k, v in conversation_metadata.items()
+                               if k not in ["conversation_id", "agent_role", "agent_specialization",
+                                           "question_type", "escalation_level", "conversation_state"]}
+            if relevant_metadata:
+                prompt_parts.append(f"\n## Additional Context\n{json.dumps(relevant_metadata, indent=2)}")
+
+        return "".join(prompt_parts)
+
     def _build_messages(
         self,
         message: str,
         context: Optional[Dict[str, Any]],
         history: List[ConversationMessage]
     ) -> List[Dict[str, str]]:
-        """Build message list for LLM (enhanced with tool information)"""
+        """Build message list for LLM (enhanced with tool information and intelligent context)"""
         messages = []
 
-        # System message with tools
-        system_content = self.config.system_prompt
+        # Build enhanced system prompt with context
+        system_content = self._build_contextual_prompt(context)
 
         # Add tool information if MCP client is available
         if self.has_mcp_client():
             tools_info = self._format_tools_for_prompt()
             if tools_info:
                 system_content += f"\n\n{tools_info}"
-
-        # Add context
-        if context:
-            system_content += f"\n\n## Current Context\n{json.dumps(context, indent=2)}"
 
         messages.append({"role": "system", "content": system_content})
 

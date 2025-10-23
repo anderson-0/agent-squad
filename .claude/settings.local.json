@@ -89,7 +89,12 @@
       "Bash(PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad .venv/bin/alembic revision:*)",
       "Bash(PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad backend/.venv/bin/alembic -c backend/alembic.ini upgrade head:*)",
       "Bash(PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad .venv/bin/alembic -c backend/alembic.ini upgrade head:*)",
-      "Bash(DEBUG=False PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad .venv/bin/python ../test_mvp_e2e.py)"
+      "Bash(DEBUG=False PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad .venv/bin/python ../test_mvp_e2e.py)",
+      "Bash(DEBUG=False python demo_phase1_ai_responses.py)",
+      "Read(//tmp/**)",
+      "Bash(DEBUG=False PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad backend/.venv/bin/python demo_phase3_streaming.py)",
+      "Bash(DEBUG=False PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad python test_sse_streaming_e2e.py)",
+      "Bash(DEBUG=False PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad backend/.venv/bin/python test_sse_streaming_e2e.py)"
     ],
     "deny": [],
     "ask": []

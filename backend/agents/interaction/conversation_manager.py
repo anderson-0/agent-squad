@@ -7,10 +7,14 @@ Manages the lifecycle of agent-to-agent conversations including:
 - Monitoring timeouts
 - Managing escalations
 - Resolving conversations
+
+NEW (Oct 22, 2025): Now triggers AI agent processing automatically!
 """
 from datetime import datetime, timedelta
 from typing import Optional
 from uuid import UUID, uuid4
+import asyncio
+import logging
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,6 +29,9 @@ from backend.models import (
 from backend.agents.interaction.routing_engine import RoutingEngine
 from backend.agents.configuration.interaction_config import InteractionConfig, get_interaction_config
 from backend.agents.communication.message_bus import get_message_bus
+
+
+logger = logging.getLogger(__name__)
 
 
 class ConversationManager:
@@ -157,6 +164,39 @@ class ConversationManager:
         self.db.add(event)
         await self.db.commit()
         await self.db.refresh(conversation)
+
+        # NEW: Trigger AI agent processing in background
+        # Import here to avoid circular dependency
+        from backend.agents.interaction.agent_message_handler import AgentMessageHandler
+        from backend.core.database import AsyncSessionLocal
+
+        logger.info(
+            f"Triggering AI processing for conversation {conversation.id}: "
+            f"{asker.role} → {responder.role}"
+        )
+
+        # Create background task with its own database session
+        # (async tasks can't share db sessions)
+        async def process_in_background():
+            """Background task with its own DB session."""
+            async with AsyncSessionLocal() as bg_db:
+                handler = AgentMessageHandler(bg_db)
+                try:
+                    await handler.process_incoming_message(
+                        message_id=message.id,
+                        recipient_id=responder.id,
+                        sender_id=asker_id,
+                        content=question_content,
+                        message_type="question",
+                        conversation_id=conversation.id
+                    )
+                except Exception as e:
+                    logger.error(f"Background processing failed: {e}", exc_info=True)
+
+        # Trigger background processing
+        asyncio.create_task(process_in_background())
+
+        logger.info(f"Background AI processing task created for conversation {conversation.id}")
 
         return conversation
 
