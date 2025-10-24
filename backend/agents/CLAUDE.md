@@ -50,37 +50,44 @@ The `agents/` module is the core of the Agent Squad system, containing all AI ag
 
 ## Key Files
 
-### `base_agent.py`
+### `agno_base.py`
 
-**Purpose**: Foundation for all AI agents in the system.
+**Purpose**: Foundation for all AI agents using the Agno framework (enterprise-grade).
 
 **Key Components**:
-- `BaseSquadAgent` (Abstract Base Class): Base class that all specialized agents inherit from
+- `AgnoSquadAgent` (Abstract Base Class): Base class that all specialized agents inherit from
 - `AgentConfig`: Configuration for agents (role, LLM provider, model, temperature, etc.)
 - `ConversationMessage`: Single message in a conversation
 - `AgentResponse`: Response from an agent with content, thinking, action items
 - `ToolCall` & `ToolResult`: MCP (Model Context Protocol) tool integration
 
+**Agno Framework Features**:
+- ✅ **Persistent Sessions**: Sessions stored in PostgreSQL, survive restarts
+- ✅ **Built-in Memory**: Agno manages conversation history automatically
+- ✅ **Session Resumption**: Resume conversations by passing `session_id`
+- ✅ **Production-Ready**: Battle-tested framework with proven architecture
+
 **LLM Provider Support**:
-- OpenAI (GPT-4, GPT-3.5)
-- Anthropic (Claude)
+- OpenAI (GPT-4, GPT-4o, GPT-3.5)
+- Anthropic (Claude 3.5 Sonnet, Claude 3 Opus)
 - Groq (Llama, Mixtral)
 
 **Key Methods**:
 - `process_message()`: Main entry point for processing user messages
-- `process_message_with_tools()`: Process message with automatic tool execution
-- `execute_tool()`: Execute MCP tools (Git, Jira, etc.)
-- `_call_llm()`: Route to appropriate LLM provider
+- `send_message()`: Send message to another agent via message bus
+- `broadcast_message()`: Broadcast message to all agents
 - `get_capabilities()`: Abstract method implemented by each agent
+- `execute_tool()`: Execute MCP tools (Git, Jira, etc.)
 
 **Business Rules**:
 1. All agents must implement `get_capabilities()` method
 2. System prompts are loaded from `roles/{role}/{specialization}.md` files
-3. Token usage is tracked per agent
-4. Conversation history is maintained per agent instance
-5. Tool execution is limited to max 5 iterations to prevent infinite loops
+3. Sessions are lazy-loaded (created on first `process_message()` call)
+4. Token usage is tracked per agent
+5. Conversation history is automatically persisted by Agno
+6. Tool execution is limited to max 5 iterations to prevent loops
 
-**Location**: `/backend/agents/base_agent.py:1`
+**Location**: `/backend/agents/agno_base.py:1`
 
 ---
 
@@ -92,16 +99,16 @@ The `agents/` module is the core of the Agent Squad system, containing all AI ag
 - `AgentFactory`: Static factory class
 - `AGENT_REGISTRY`: Dictionary mapping roles to agent classes
 
-**Supported Roles**:
-- `project_manager`: ProjectManagerAgent
-- `backend_developer`: BackendDeveloperAgent
-- `frontend_developer`: FrontendDeveloperAgent
-- `tester`: QATesterAgent
-- `tech_lead`: TechLeadAgent
-- `solution_architect`: SolutionArchitectAgent
-- `devops_engineer`: DevOpsEngineerAgent
-- `ai_engineer`: AIEngineerAgent
-- `designer`: DesignerAgent
+**Supported Roles** (All Agno-Powered):
+- `project_manager`: AgnoProjectManagerAgent
+- `backend_developer`: AgnoBackendDeveloperAgent
+- `frontend_developer`: AgnoFrontendDeveloperAgent
+- `tester`: AgnoQATesterAgent
+- `tech_lead`: AgnoTechLeadAgent
+- `solution_architect`: AgnoSolutionArchitectAgent
+- `devops_engineer`: AgnoDevOpsEngineerAgent
+- `ai_engineer`: AgnoAIEngineerAgent
+- `designer`: AgnoDesignerAgent
 
 **Key Methods**:
 - `create_agent()`: Create a new agent instance
@@ -127,20 +134,20 @@ The `agents/` module is the core of the Agent Squad system, containing all AI ag
 agents/
 ├── CLAUDE.md                    # This file
 ├── __init__.py                  # Module initialization
-├── base_agent.py                # Base agent class (609 lines)
-├── factory.py                   # Agent factory (248 lines)
+├── agno_base.py                 # Agno base agent class (enterprise-grade)
+├── factory.py                   # Agent factory (Agno-only, 331 lines)
 │
-├── specialized/                 # Specialized agent implementations
+├── specialized/                 # Specialized Agno agent implementations
 │   ├── CLAUDE.md
-│   ├── project_manager.py       # PM agent - orchestrates squad
-│   ├── tech_lead.py             # TL agent - technical decisions
-│   ├── backend_developer.py     # Backend dev agent
-│   ├── frontend_developer.py    # Frontend dev agent
-│   ├── qa_tester.py             # QA agent
-│   ├── solution_architect.py    # Architect agent
-│   ├── devops_engineer.py       # DevOps agent
-│   ├── ai_engineer.py           # AI/ML engineer agent
-│   └── designer.py              # Designer agent
+│   ├── agno_project_manager.py       # PM agent - orchestrates squad
+│   ├── agno_tech_lead.py             # TL agent - technical decisions
+│   ├── agno_backend_developer.py     # Backend dev agent
+│   ├── agno_frontend_developer.py    # Frontend dev agent
+│   ├── agno_qa_tester.py             # QA agent
+│   ├── agno_solution_architect.py    # Architect agent
+│   ├── agno_devops_engineer.py       # DevOps agent
+│   ├── agno_ai_engineer.py           # AI/ML engineer agent
+│   └── agno_designer.py              # Designer agent
 │
 ├── communication/               # Agent-to-agent communication
 │   ├── CLAUDE.md
@@ -339,12 +346,13 @@ When testing agents:
 
 ## Common Patterns
 
-### Creating a Custom Agent
+### Creating a Custom Agno Agent
 
 ```python
-from backend.agents.base_agent import BaseSquadAgent, AgentConfig
+from backend.agents.agno_base import AgnoSquadAgent, AgentConfig
+from uuid import UUID
 
-class CustomAgent(BaseSquadAgent):
+class CustomAgent(AgnoSquadAgent):
     def get_capabilities(self) -> List[str]:
         return ["custom_capability_1", "custom_capability_2"]
 
@@ -356,6 +364,7 @@ class CustomAgent(BaseSquadAgent):
         return response
 
 # Register in factory.py
+from backend.agents.factory import AGENT_REGISTRY
 AGENT_REGISTRY["custom_role"] = CustomAgent
 ```
 

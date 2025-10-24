@@ -2,7 +2,9 @@
 
 ## Overview
 
-The `specialized/` folder contains concrete implementations of specialized AI agents that work together as a software development squad. Each agent has a specific role, capabilities, and responsibilities that mirror a real software development team.
+The `specialized/` folder contains Agno-powered implementations of specialized AI agents that work together as a software development squad. Each agent has a specific role, capabilities, and responsibilities that mirror a real software development team.
+
+**All agents use the Agno framework** providing enterprise-grade features like persistent sessions, automatic memory management, and production-ready architecture.
 
 ## Team Structure
 
@@ -343,12 +345,13 @@ All agents can send/receive these message types (defined in `backend/schemas/age
 - `Standup`: PM → All
 
 ### Base Capabilities
-All agents inherit from `BaseSquadAgent` and have:
-- LLM integration (OpenAI, Anthropic, Groq)
-- Conversation history management
-- Token usage tracking
-- MCP tool execution (Git, Jira, etc.)
-- Context awareness (RAG, memory)
+All agents inherit from `AgnoSquadAgent` (Agno framework) and have:
+- ✅ **Persistent Sessions**: Conversations survive restarts
+- ✅ **Automatic Memory**: Agno manages history & context
+- ✅ **LLM Integration**: OpenAI, Anthropic, Groq support
+- ✅ **Message Bus Integration**: NATS JetStream for communication
+- ✅ **MCP Tool Execution**: Git, Jira, GitHub tools (Phase 4)
+- ✅ **Context Awareness**: RAG, memory, conversation history
 
 ### Response Parsing
 All specialized agents implement helper methods to parse LLM responses:
@@ -399,35 +402,17 @@ Agents collaborate via **Collaboration Patterns** (`collaboration/patterns.py`):
 
 ---
 
-## Phase 3 vs Phase 4
-
-### Phase 3 (Current)
-Agents provide:
-- Analysis and planning
-- Recommendations and guidance
-- Structured messages
-- Decision making
-
-### Phase 4 (Future)
-Agents will additionally:
-- Execute MCP tools (Git, Jira, GitHub)
-- Read/write code directly
-- Create PRs automatically
-- Run tests
-- Deploy to environments
-
-**Note**: All agents have tool execution capabilities built-in, but MCP integration is configured externally.
-
----
-
 ## Creating Custom Specialized Agents
 
-```python
-from backend.agents.base_agent import BaseSquadAgent, AgentConfig
-from typing import List
+All agents are built on the Agno framework. To create a custom agent:
 
-class CustomAgent(BaseSquadAgent):
-    """Custom specialized agent"""
+```python
+from backend.agents.agno_base import AgnoSquadAgent, AgentConfig
+from typing import List
+from uuid import UUID
+
+class CustomAgent(AgnoSquadAgent):
+    """Custom specialized agent powered by Agno"""
 
     def get_capabilities(self) -> List[str]:
         return [
@@ -447,6 +432,12 @@ class CustomAgent(BaseSquadAgent):
 from backend.agents.factory import AGENT_REGISTRY
 AGENT_REGISTRY["custom_role"] = CustomAgent
 ```
+
+**Agno Benefits**:
+- Persistent sessions (conversations survive restarts)
+- Automatic memory management
+- Production-ready architecture
+- Built-in message bus integration
 
 ---
 
