@@ -409,16 +409,185 @@ class AgnoSquadAgent(ABC):
         """
         Prepare tools for agent.
 
-        Override in subclasses to add specific tools.
+        Automatically initializes MCP tools based on agent role.
+        Subclasses can override to add additional custom tools.
 
         Returns:
-            List of tools
+            List of tools (Agno-compatible functions)
 
         Design Pattern: Hook Method (Template Method pattern)
         """
-        # Base implementation: no tools
-        # Subclasses can override to add MCP tools, etc.
-        return []
+        # Try to initialize MCP tools for this role
+        try:
+            from backend.services.agent_mcp_service import get_agent_mcp_service
+
+            mcp_service = get_agent_mcp_service()
+
+            # Get available tools for this role
+            available_tools = mcp_service.mapper.get_all_tools_for_role(self.config.role)
+
+            if not available_tools:
+                logger.debug(f"No MCP tools configured for role '{self.config.role}'")
+                return []
+
+            # Create Agno-compatible tool functions
+            tools = self._create_mcp_tool_functions(mcp_service, available_tools)
+
+            logger.info(
+                f"Prepared {len(tools)} MCP tools for role '{self.config.role}'"
+            )
+
+            return tools
+
+        except Exception as e:
+            logger.warning(
+                f"Failed to initialize MCP tools for role '{self.config.role}': {e}"
+            )
+            # Non-fatal: agent works without tools
+            return []
+
+    def _create_mcp_tool_functions(
+        self,
+        mcp_service: Any,
+        available_tools: Dict[str, List[str]]
+    ) -> List[Callable]:
+        """
+        Create Agno-compatible tool functions from MCP tools.
+
+        Args:
+            mcp_service: AgentMCPService instance
+            available_tools: Dict mapping server -> list of tool names
+
+        Returns:
+            List of callable tool functions
+        """
+        tools = []
+
+        for server, tool_names in available_tools.items():
+            for tool_name in tool_names:
+                # Create wrapped function for this tool
+                tool_func = self._create_tool_function(
+                    mcp_service, server, tool_name
+                )
+                tools.append(tool_func)
+
+        return tools
+
+    def _create_tool_function(
+        self,
+        mcp_service: Any,
+        server: str,
+        tool_name: str
+    ) -> Callable:
+        """
+        Create an Agno-compatible tool function for a specific MCP tool.
+
+        Args:
+            mcp_service: AgentMCPService instance
+            server: MCP server name
+            tool_name: Tool name
+
+        Returns:
+            Callable tool function
+        """
+        import asyncio
+        from typing import Annotated
+        import inspect
+
+        # Create async wrapper that executes the MCP tool
+        async def tool_wrapper(**kwargs) -> str:
+            """
+            Execute MCP tool via AgentMCPService.
+
+            This function is dynamically created for each MCP tool
+            and provides permission-checked execution.
+            """
+            try:
+                # Initialize MCP servers if needed (first call)
+                if not mcp_service.is_server_connected(self.config.role, server):
+                    logger.debug(
+                        f"Initializing MCP server '{server}' for role '{self.config.role}'"
+                    )
+                    await mcp_service.initialize_agent_tools(self.config.role)
+
+                # Execute tool with permission checking
+                result = await mcp_service.execute_tool(
+                    role=self.config.role,
+                    server=server,
+                    tool=tool_name,
+                    arguments=kwargs,
+                    track_usage=True
+                )
+
+                # Track in agent history
+                self.tool_execution_history.append(ToolResult(
+                    success=True,
+                    result=result,
+                    error=None,
+                    tool_name=f"{server}.{tool_name}",
+                    execution_time=None
+                ))
+
+                # Return result as string (Agno expects string return)
+                return str(result)
+
+            except PermissionError as e:
+                error_msg = f"Permission denied: {e}"
+                logger.error(error_msg)
+
+                # Track failure
+                self.tool_execution_history.append(ToolResult(
+                    success=False,
+                    result=None,
+                    error=error_msg,
+                    tool_name=f"{server}.{tool_name}",
+                    execution_time=None
+                ))
+
+                return error_msg
+
+            except Exception as e:
+                error_msg = f"Tool execution failed: {e}"
+                logger.error(error_msg)
+
+                # Track failure
+                self.tool_execution_history.append(ToolResult(
+                    success=False,
+                    result=None,
+                    error=error_msg,
+                    tool_name=f"{server}.{tool_name}",
+                    execution_time=None
+                ))
+
+                return error_msg
+
+        # Set function metadata for Agno
+        tool_wrapper.__name__ = f"{server}_{tool_name}"
+        tool_wrapper.__doc__ = f"Execute {tool_name} on {server} MCP server"
+
+        # Agno needs sync functions, so wrap async in sync
+        def sync_wrapper(**kwargs) -> str:
+            """Synchronous wrapper for async tool execution."""
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # If event loop is running, we're in an async context
+                # Create a task and wait for it
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(
+                        asyncio.run,
+                        tool_wrapper(**kwargs)
+                    )
+                    return future.result()
+            else:
+                # No event loop, we can use asyncio.run
+                return asyncio.run(tool_wrapper(**kwargs))
+
+        # Copy metadata
+        sync_wrapper.__name__ = tool_wrapper.__name__
+        sync_wrapper.__doc__ = tool_wrapper.__doc__
+
+        return sync_wrapper
 
     def _format_agent_name(self) -> str:
         """Format agent name for Agno"""

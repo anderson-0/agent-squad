@@ -126,7 +126,8 @@
       "Bash(PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad MESSAGE_BUS=nats USE_AGNO_AGENTS=true backend/.venv/bin/python test_nats_agno_integration.py:*)",
       "Bash(PYTHONPATH=/Users/anderson/Documents/anderson-0/agent-squad MESSAGE_BUS=nats USE_AGNO_AGENTS=true backend/.venv/bin/python:*)",
       "Bash(git add:*)",
-      "Bash(git commit -m \"$(cat <<''EOF''\nPre-removal backup: Legacy code before cleanup\n\nThis commit contains:\n- All custom agent implementations (9 files)\n- base_agent.py (BaseSquadAgent)\n- Dual-mode factory.py\n- Repository stub folder\n- Current documentation state\n\nNext: Execute legacy code removal plan\n- Remove custom agents (replaced by Agno)\n- Simplify factory to Agno-only\n- Clean up unused code\n\nThis backup allows easy rollback if needed.\nEOF\n)\")"
+      "Bash(git commit -m \"$(cat <<''EOF''\nPre-removal backup: Legacy code before cleanup\n\nThis commit contains:\n- All custom agent implementations (9 files)\n- base_agent.py (BaseSquadAgent)\n- Dual-mode factory.py\n- Repository stub folder\n- Current documentation state\n\nNext: Execute legacy code removal plan\n- Remove custom agents (replaced by Agno)\n- Simplify factory to Agno-only\n- Clean up unused code\n\nThis backup allows easy rollback if needed.\nEOF\n)\")",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []

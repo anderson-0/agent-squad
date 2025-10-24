@@ -49,6 +49,17 @@ class Settings(BaseSettings):
     # Anthropic (optional)
     ANTHROPIC_API_KEY: str = Field(default="", env="ANTHROPIC_API_KEY")
 
+    # Groq (optional)
+    GROQ_API_KEY: str = Field(default="", env="GROQ_API_KEY")
+
+    # GitHub Integration (for MCP tools)
+    GITHUB_TOKEN: str = Field(default="", env="GITHUB_TOKEN")
+
+    # Jira Integration (for MCP tools)
+    JIRA_URL: str = Field(default="", env="JIRA_URL")
+    JIRA_USERNAME: str = Field(default="", env="JIRA_USERNAME")
+    JIRA_API_TOKEN: str = Field(default="", env="JIRA_API_TOKEN")
+
     # Pinecone (optional for development)
     PINECONE_API_KEY: str = Field(default="", env="PINECONE_API_KEY")
     PINECONE_ENVIRONMENT: str = Field(default="", env="PINECONE_ENVIRONMENT")
@@ -93,6 +104,11 @@ class Settings(BaseSettings):
     NATS_MAX_MSGS: int = 1_000_000  # 1M messages
     NATS_MAX_AGE_DAYS: int = 7  # 7 days retention
     NATS_CONSUMER_NAME: str = "agent-processor"
+
+    # MCP Tools Configuration
+    MCP_TOOLS_ENABLED: bool = True  # Enable/disable MCP tools globally
+    MCP_CONFIG_PATH: str = ""  # Custom path to mcp_tool_mapping.yaml (optional)
+    MCP_LOG_LEVEL: str = "INFO"  # MCP-specific logging level
 
     model_config = SettingsConfigDict(
         env_file=".env",

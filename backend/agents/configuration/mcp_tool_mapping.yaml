@@ -1,0 +1,277 @@
+# MCP Tool Mapping Configuration
+# Defines which MCP tools each agent role can access
+# Version: 2.0 - Flexible: Self-Hosted (default) or Smithery (optional)
+
+# =============================================================================
+# MCP Server Configurations
+# =============================================================================
+# Choose your deployment model:
+#   - self_hosted: Free, unlimited, full control (RECOMMENDED for production)
+#   - smithery: Hosted, easier setup, limited free tier (good for dev/testing)
+#
+# Switch between modes by changing the 'active_profile' below
+
+# Active Profile: "self_hosted" or "smithery"
+active_profile: "self_hosted"
+
+# Server Configuration Profiles
+server_profiles:
+  # ===========================================================================
+  # SELF-HOSTED (RECOMMENDED for production)
+  # ===========================================================================
+  # Pros: Free unlimited usage, full control, best for production
+  # Cons: You manage updates and uptime
+  # Setup time: ~15 minutes
+
+  self_hosted:
+    git:
+      command: "uvx"
+      args: ["mcp-server-git"]
+      env: {}
+      description: "Local git operations"
+      install: "npm install -g @modelcontextprotocol/server-git"
+
+    github:
+      command: "uvx"
+      args: ["mcp-server-github"]
+      env:
+        GITHUB_TOKEN: "${GITHUB_TOKEN}"
+      description: "GitHub API operations (self-hosted)"
+      install: "npm install -g @modelcontextprotocol/server-github"
+
+    jira:
+      # Option 1: Use official Atlassian SDK (recommended)
+      command: "npx"
+      args: ["-y", "@aashari/mcp-server-atlassian-jira"]
+      env:
+        JIRA_URL: "${JIRA_URL}"
+        JIRA_EMAIL: "${JIRA_USERNAME}"
+        JIRA_API_TOKEN: "${JIRA_API_TOKEN}"
+      description: "Jira API operations (community package)"
+      install: "npx @aashari/mcp-server-atlassian-jira"
+
+  # ===========================================================================
+  # SMITHERY (OPTIONAL for dev/testing)
+  # ===========================================================================
+  # Pros: Easier setup, managed hosting, good for quick testing
+  # Cons: Pricing after 10k requests/month, less control
+  # Setup time: ~5 minutes
+
+  smithery:
+    git:
+      command: "uvx"
+      args: ["mcp-server-git"]
+      env: {}
+      description: "Local git operations (same as self-hosted)"
+      install: "npm install -g @modelcontextprotocol/server-git"
+
+    github:
+      command: "npx"
+      args: ["-y", "@smithery/cli", "run", "@smithery-ai/github"]
+      env:
+        GITHUB_TOKEN: "${GITHUB_TOKEN}"
+      description: "GitHub API via Smithery (hosted)"
+      install: "npm install -g @smithery/cli"
+      note: "Free <10k requests/month, then pricing applies"
+
+    jira:
+      command: "npx"
+      args: ["-y", "@smithery/cli", "run", "@aashari/mcp-server-atlassian-jira"]
+      env:
+        JIRA_URL: "${JIRA_URL}"
+        JIRA_EMAIL: "${JIRA_USERNAME}"
+        JIRA_API_TOKEN: "${JIRA_API_TOKEN}"
+      description: "Jira API via Smithery (hosted)"
+      install: "npm install -g @smithery/cli"
+      note: "Free <10k requests/month, then pricing applies"
+
+# =============================================================================
+# Role-Based Tool Mappings (same for both profiles)
+# =============================================================================
+
+roles:
+  # Project Manager: Planning, coordination, ticket management
+  project_manager:
+    mcp_servers:
+      - jira
+      - github
+    tools:
+      jira:
+        - create_ticket
+        - get_ticket
+        - update_ticket
+        - add_comment
+        - change_status
+        - assign_ticket
+        - search_tickets
+        - get_sprint
+      github:
+        - list_issues
+        - create_issue
+        - get_repository
+
+  # Tech Lead: Code review, architecture decisions, mentoring
+  tech_lead:
+    mcp_servers:
+      - git
+      - github
+      - jira
+    tools:
+      git:
+        - git_status
+        - git_diff
+        - git_log
+        - git_branch
+        - git_merge
+      github:
+        - get_pull_request
+        - update_pull_request
+        - merge_pull_request
+        - add_issue_comment
+        - search_code
+        - get_repository
+      jira:
+        - get_ticket
+        - add_comment
+        - search_tickets
+
+  # Backend Developer: Backend implementation
+  backend_developer:
+    mcp_servers:
+      - git
+      - github
+    tools:
+      git:
+        - git_status
+        - git_diff
+        - git_log
+        - git_branch
+        - git_checkout
+        - git_commit
+        - git_push
+        - git_pull
+      github:
+        - create_pull_request
+        - get_pull_request
+        - update_pull_request
+        - create_issue
+        - add_issue_comment
+        - search_code
+
+  # Frontend Developer: Frontend implementation
+  frontend_developer:
+    mcp_servers:
+      - git
+      - github
+    tools:
+      git:
+        - git_status
+        - git_diff
+        - git_log
+        - git_branch
+        - git_checkout
+        - git_commit
+        - git_push
+        - git_pull
+      github:
+        - create_pull_request
+        - get_pull_request
+        - update_pull_request
+        - create_issue
+        - add_issue_comment
+        - search_code
+
+  # QA Tester: Testing, quality assurance, bug reporting
+  qa_tester:
+    mcp_servers:
+      - github
+      - jira
+    tools:
+      github:
+        - create_issue
+        - get_issue
+        - add_issue_comment
+        - list_issues
+        - get_pull_request
+      jira:
+        - get_ticket
+        - update_ticket
+        - add_comment
+        - change_status
+        - create_ticket
+        - search_tickets
+
+  # DevOps Engineer: Infrastructure, deployment, CI/CD
+  devops_engineer:
+    mcp_servers:
+      - git
+      - github
+    tools:
+      git:
+        - git_status
+        - git_diff
+        - git_log
+        - git_branch
+        - git_checkout
+        - git_merge
+        - git_push
+        - git_pull
+      github:
+        - create_pull_request
+        - merge_pull_request
+        - create_issue
+        - get_repository
+        - search_code
+
+  # Solution Architect: Architecture design, technical decisions
+  solution_architect:
+    mcp_servers:
+      - github
+      - jira
+    tools:
+      github:
+        - get_repository
+        - search_code
+        - get_pull_request
+        - list_issues
+      jira:
+        - get_ticket
+        - add_comment
+        - search_tickets
+
+  # AI Engineer: AI/ML implementation, model integration
+  ai_engineer:
+    mcp_servers:
+      - git
+      - github
+    tools:
+      git:
+        - git_status
+        - git_diff
+        - git_log
+        - git_branch
+        - git_checkout
+        - git_commit
+        - git_push
+        - git_pull
+      github:
+        - create_pull_request
+        - get_pull_request
+        - update_pull_request
+        - create_issue
+        - search_code
+
+  # Designer: UX/UI design and user experience
+  designer:
+    mcp_servers:
+      - github
+    tools:
+      github:
+        - create_issue
+        - add_issue_comment
+        - get_issue
+        - list_issues
+
+# Alternative naming (aliases)
+aliases:
+  tester: qa_tester
