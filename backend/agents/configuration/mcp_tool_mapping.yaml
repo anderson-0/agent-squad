@@ -12,7 +12,7 @@
 # Switch between modes by changing the 'active_profile' below
 
 # Active Profile: "self_hosted" or "smithery"
-active_profile: "self_hosted"
+active_profile: "smithery"  # Using Smithery for easy testing!
 
 # Server Configuration Profiles
 server_profiles:
