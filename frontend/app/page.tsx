@@ -16,6 +16,12 @@ export default function Home() {
             Get Started
           </a>
           <a
+            href="/dashboard"
+            className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+          >
+            View Dashboard
+          </a>
+          <a
             href="http://localhost:8000/docs"
             target="_blank"
             rel="noopener noreferrer"
