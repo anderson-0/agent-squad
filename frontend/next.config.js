@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  swcMinify: true,
 
   // Environment variables exposed to the browser
   env: {
@@ -9,30 +8,23 @@ const nextConfig = {
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
   },
 
-  // Image optimization
+  // Image optimization (updated for Next.js 16)
   images: {
-    domains: ['localhost'],
+    remotePatterns: [
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+      },
+    ],
     formats: ['image/avif', 'image/webp'],
   },
 
-  // Experimental features
-  experimental: {
-    serverActions: true,
+  // Turbopack configuration (required for Next.js 16)
+  turbopack: {
+    // Empty config to enable Turbopack with default settings
   },
 
-  // Webpack configuration
-  webpack: (config, { isServer }) => {
-    if (!isServer) {
-      // Don't resolve 'fs' module on the client
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false,
-        net: false,
-        tls: false,
-      };
-    }
-    return config;
-  },
+  // Server actions are now stable in Next.js 16 (no experimental flag needed)
 };
 
 module.exports = nextConfig;
