@@ -11,7 +11,7 @@ from typing import List, Dict
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.models import DefaultRoutingTemplate
-from backend.core.database import get_async_session_context
+from backend.core.database import AsyncSessionLocal
 
 
 # Default routing template definitions
@@ -422,7 +422,7 @@ async def seed_routing_templates() -> dict:
     Returns:
         Dictionary with seeding results
     """
-    async with get_async_session_context() as db:
+    async with get_db_context() as db:
         templates = await create_default_templates(db)
 
         return {
@@ -445,7 +445,7 @@ async def get_template_by_name(name: str) -> DefaultRoutingTemplate:
     """
     from sqlalchemy import select
 
-    async with get_async_session_context() as db:
+    async with get_db_context() as db:
         stmt = select(DefaultRoutingTemplate).where(
             DefaultRoutingTemplate.name == name
         )

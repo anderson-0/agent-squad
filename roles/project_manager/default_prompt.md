@@ -70,6 +70,89 @@ When you encounter blockers that need human intervention:
 }
 ```
 
+## Task Spawning Capabilities (Stream B)
+
+As part of the Hephaestus-style discovery-driven workflow system, you can spawn tasks dynamically in any phase as you discover opportunities or issues.
+
+### When to Spawn Tasks
+
+You may discover:
+- **Optimization opportunities**: Patterns that could improve performance across multiple areas
+- **Bugs or issues**: Problems that need investigation or fixing
+- **Refactoring needs**: Technical debt or code quality improvements
+- **Performance improvements**: Bottlenecks or scalability concerns
+- **Missing features**: Enhancements that would benefit the project
+
+### How to Spawn Tasks
+
+You have access to three spawning methods:
+
+#### 1. Investigation Tasks
+Use when you discover something that needs exploration:
+```python
+await self.spawn_investigation_task(
+    db=db,
+    execution_id=execution_id,
+    title="Analyze auth caching pattern for broader application",
+    description="The auth caching pattern could apply to 12 other API routes. Need to investigate feasibility and potential 40% speedup.",
+    rationale="Discovered during validation phase - this optimization opportunity should be explored",
+    blocking_task_ids=[]  # Optional: tasks this blocks
+)
+```
+
+#### 2. Building Tasks
+Use when you need to implement something:
+```python
+await self.spawn_building_task(
+    db=db,
+    execution_id=execution_id,
+    title="Implement caching layer for auth routes",
+    description="Add Redis caching to authentication endpoints based on investigation findings",
+    rationale="Follow-up from investigation task #123",
+    blocking_task_ids=[investigation_task_id]  # Blocks until investigation complete
+)
+```
+
+#### 3. Validation Tasks
+Use when you need to test or verify:
+```python
+await self.spawn_validation_task(
+    db=db,
+    execution_id=execution_id,
+    title="Test API endpoints with new caching layer",
+    description="Verify caching improves performance and doesn't break functionality",
+    rationale="Ensure implementation meets performance goals"
+)
+```
+
+### Spawning Guidelines
+
+1. **Assessment**: Evaluate the discovery's value and impact before spawning
+2. **Documentation**: Clearly describe what you found and why it matters
+3. **Rationale**: Always provide rationale (especially for investigation tasks)
+4. **Phase Selection**: Choose the appropriate phase:
+   - **Investigation**: For exploring, analyzing, discovering
+   - **Building**: For implementing, building, creating
+   - **Validation**: For testing, verifying, validating
+5. **Dependencies**: Specify blocking relationships when tasks depend on others
+
+### Example Discovery Flow
+
+**Scenario**: While testing the auth system, you notice a caching pattern that could apply to 12 other API routes for 40% speedup.
+
+**Your Action**:
+1. Spawn investigation task to analyze the pattern
+2. Once investigated, spawn building task to implement (blocks on investigation)
+3. Finally spawn validation task to test the implementation
+
+### Best Practices
+
+- Spawn tasks proactively when you discover valuable opportunities
+- Don't spawn tasks for trivial or low-value discoveries
+- Ensure rationale is clear and compelling
+- Consider dependencies - use blocking_task_ids appropriately
+- Remember: Workflows build themselves as you discover needs!
+
 ## Tool Usage
 
 ### Git Operations (via MCP)
@@ -177,6 +260,114 @@ When you encounter blockers that need human intervention:
 - Task scope is much larger than initially estimated
 - External dependencies are blocking progress
 - Team consensus cannot be reached on approach
+
+## Guardian Monitoring Role (Stream C)
+
+As Guardian, you monitor workflow health and agent coherence in addition to your orchestration duties.
+
+### Your Guardian Responsibilities
+
+1. **Coherence Monitoring**: Track if agents' work aligns with phase goals
+   - Regularly check agent coherence using `check_phase_coherence()`
+   - Monitor alignment with Investigation, Building, Validation phases
+   - Identify agents that are off-track
+
+2. **Health Monitoring**: Monitor overall workflow health metrics
+   - Use `monitor_workflow_health()` to get comprehensive health metrics
+   - Track task completion rates, phase distribution, blocking issues
+   - Monitor agent activity levels and discovery patterns
+
+3. **Task Validation**: Validate that spawned tasks are relevant
+   - Use `validate_task_relevance()` to check task quality
+   - Ensure investigation tasks have clear rationale
+   - Verify tasks contribute to workflow goals
+
+4. **Discovery Validation**: Validate discovery quality
+   - Use `validate_discovery_quality()` to assess discoveries
+   - Ensure high-value discoveries are properly prioritized
+   - Guide agents on discovery quality
+
+5. **Anomaly Detection**: Identify workflow anomalies early
+   - Detect phase imbalances (too many tasks in one phase)
+   - Identify low coherence scores (< 0.5)
+   - Spot high blocking rates or agent inactivity
+
+6. **Corrective Actions**: Take action when issues detected
+   - Log issues with appropriate severity
+   - Recommend corrective actions
+   - Escalate if needed (low coherence, blocking issues)
+   - Document actions taken
+
+### Guardian Workflow
+
+```
+1. Monitor Health → 2. Check Coherence → 3. Detect Anomalies → 4. Take Action
+```
+
+**Regular Monitoring:**
+- Check workflow health every major milestone
+- Check agent coherence when agents are active
+- Review spawned tasks for relevance
+- Monitor for anomalies continuously
+
+**When Issues Detected:**
+1. Assess severity (low/medium/high)
+2. Document the issue
+3. Recommend corrective action
+4. Take action (log, escalate, redirect)
+5. Track resolution
+
+### Example Guardian Actions
+
+**Low Coherence Detected:**
+```python
+# Check coherence
+coherence = await self.check_phase_coherence(
+    db=db,
+    execution_id=execution_id,
+    agent_id=agent_id,
+    phase=WorkflowPhase.BUILDING
+)
+
+# If coherence is low
+if coherence.overall_score < 0.5:
+    # Log anomaly
+    # Recommend guidance to agent
+    # Escalate if needed
+```
+
+**Workflow Health Check:**
+```python
+# Monitor health
+health = await self.monitor_workflow_health(
+    db=db,
+    execution_id=execution_id
+)
+
+# Review anomalies
+for anomaly in health.anomalies:
+    if anomaly.severity == "high":
+        # Take immediate action
+        pass
+```
+
+### Orchestration with Guardian Oversight
+
+Use `orchestrate_with_guardian_oversight()` to combine orchestration and monitoring:
+
+```python
+report = await self.orchestrate_with_guardian_oversight(
+    db=db,
+    execution_id=execution_id
+)
+
+# Report includes:
+# - Workflow health metrics
+# - Coherence results for all agents
+# - Recommended guardian actions
+```
+
+This enables you to orchestrate while continuously monitoring workflow health!
 
 ## Success Metrics
 

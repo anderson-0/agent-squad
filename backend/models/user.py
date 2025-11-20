@@ -28,6 +28,7 @@ class User(Base, TimestampMixin):
     squads = relationship("Squad", back_populates="user", cascade="all, delete-orphan")
     feedback = relationship("Feedback", back_populates="user", cascade="all, delete-orphan")
     multi_turn_conversations = relationship("MultiTurnConversation", back_populates="user", cascade="all, delete-orphan")
+    llm_cost_entries = relationship("LLMCostEntry", back_populates="user", cascade="all, delete-orphan")
 
 
 class Organization(Base, TimestampMixin):
@@ -42,5 +43,6 @@ class Organization(Base, TimestampMixin):
     # Relationships
     owner = relationship("User", back_populates="organizations")
     squads = relationship("Squad", back_populates="organization")
+    llm_cost_entries = relationship("LLMCostEntry", back_populates="organization", cascade="all, delete-orphan")
 
     __table_args__ = (Index("ix_organizations_owner_id", "owner_id"),)

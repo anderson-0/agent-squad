@@ -13,7 +13,7 @@ from uuid import UUID
 from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.core.database import get_async_session_context
+from backend.core.database import get_db_context
 from backend.models import Conversation, ConversationState, ConversationEvent, SquadMember
 from backend.agents.configuration.interaction_config import get_interaction_config
 from backend.agents.communication.message_bus import get_message_bus
@@ -212,7 +212,7 @@ async def check_conversation_timeouts() -> dict:
     Returns:
         Dictionary with timeout processing statistics
     """
-    async with get_async_session_context() as db:
+    async with get_db_context() as db:
         monitor = TimeoutMonitor(db)
         return await monitor.check_timeouts()
 
@@ -233,7 +233,7 @@ async def check_specific_conversation_timeout(conversation_id: UUID) -> dict:
     Returns:
         Dictionary with result of timeout check
     """
-    async with get_async_session_context() as db:
+    async with get_db_context() as db:
         monitor = TimeoutMonitor(db)
         now = datetime.utcnow()
 

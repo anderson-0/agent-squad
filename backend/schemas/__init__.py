@@ -139,6 +139,35 @@ from backend.schemas.multi_turn_conversation import (
     UserConversationStatsResponse,
     AgentConversationStatsResponse,
 )
+from backend.schemas.workflow import (
+    TaskSpawnRequest,
+    TaskSpawnResponse,
+    TaskResponse,
+    TaskStatusUpdate,
+    TaskListResponse,
+)
+from backend.schemas.branching import (
+    CreateBranchRequest,
+    BranchResponse,
+    MergeBranchRequest,
+    BranchTasksResponse,
+)
+from backend.schemas.intelligence import (
+    TaskSuggestionResponse,
+    WorkflowPredictionResponse,
+    OptimizedTaskOrderResponse,
+)
+from backend.schemas.ml import (
+    OptimizationOpportunityResponse,
+    TaskValuePredictionResponse,
+    ModelMetricsResponse,
+    TrainModelRequest,
+)
+from backend.schemas.mcp import (
+    MCPSessionInfo,
+    MCPToolResponse,
+    MCPToolsListResponse,
+)
 
 __all__ = [
     # Auth schemas
@@ -268,4 +297,24 @@ __all__ = [
     "UpdateConversationTagsRequest",
     "UserConversationStatsResponse",
     "AgentConversationStatsResponse",
+    # Workflow schemas
+    "TaskSpawnRequest",
+    "TaskSpawnResponse",
+    "TaskResponse",
+    "TaskStatusUpdate",
+    "TaskListResponse",
+    "CreateBranchRequest",
+    "BranchResponse",
+    "MergeBranchRequest",
+    "BranchTasksResponse",
+    "TaskSuggestionResponse",
+    "WorkflowPredictionResponse",
+    "OptimizedTaskOrderResponse",
+    "OptimizationOpportunityResponse",
+    "TaskValuePredictionResponse",
+    "ModelMetricsResponse",
+    "TrainModelRequest",
+    "MCPSessionInfo",
+    "MCPToolResponse",
+    "MCPToolsListResponse",
 ]

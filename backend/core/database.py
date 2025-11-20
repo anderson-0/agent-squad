@@ -17,13 +17,15 @@ from backend.models.base import Base
 # ASYNC DATABASE (Primary - Uses asyncpg)
 # ============================================================================
 
-# Create async engine with asyncpg
+# Create async engine with asyncpg (optimized connection pool)
 async_engine = create_async_engine(
     settings.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://"),
-    pool_pre_ping=True,  # Verify connections before using them
-    pool_size=5,
-    max_overflow=10,
-    echo=settings.DEBUG,  # Log SQL queries in debug mode
+    pool_pre_ping=True,     # Verify connections before using them
+    pool_size=20,           # ⚡ Increased from 5 to 20 for better concurrency
+    max_overflow=10,        # Additional connections when needed
+    pool_timeout=30,        # ⚡ Wait time for connection (seconds)
+    pool_recycle=3600,      # ⚡ Recycle connections every hour to prevent stale connections
+    echo=settings.DEBUG,    # Log SQL queries in debug mode
 )
 
 # Create async sessionmaker
@@ -92,8 +94,10 @@ async def get_db_context() -> AsyncGenerator[AsyncSession, None]:
 sync_engine = create_engine(
     settings.DATABASE_URL,
     pool_pre_ping=True,
-    pool_size=5,
+    pool_size=20,           # ⚡ Increased from 5 to 20
     max_overflow=10,
+    pool_timeout=30,        # ⚡ Wait time for connection
+    pool_recycle=3600,      # ⚡ Recycle connections every hour
     echo=settings.DEBUG,
 )
 
