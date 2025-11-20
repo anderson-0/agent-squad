@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.agents.configuration.mcp_tool_mapper import get_tool_mapper, MCPToolMapper
 from backend.integrations.mcp.client import MCPClientManager
-from backend.models.squad_member import SquadMember
+from backend.models import SquadMember  # Fixed: Import from models package, not squad_member module
 
 logger = logging.getLogger(__name__)
 

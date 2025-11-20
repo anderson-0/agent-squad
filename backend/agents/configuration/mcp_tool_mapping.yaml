@@ -50,6 +50,32 @@ server_profiles:
       description: "Jira API operations (community package)"
       install: "npx @aashari/mcp-server-atlassian-jira"
 
+    python_executor:
+      command: "python"
+      args: ["-m", "backend.integrations.mcp.servers.python_executor_server"]
+      env:
+        E2B_API_KEY: "${E2B_API_KEY}"
+      description: "Python code execution using E2B cloud sandboxes (secure, isolated)"
+      install: "pip install e2b-code-interpreter"
+      note: "Get API key at https://e2b.dev - same sandboxing as Lovable and other AI platforms"
+
+    database:
+      command: "python"
+      args: ["-m", "backend.integrations.mcp.servers.database_server"]
+      env:
+        DATABASE_URL: "${DATABASE_URL}"
+      description: "Database access (read-only SQL queries)"
+      install: "pip install sqlalchemy"
+
+    file_storage:
+      command: "python"
+      args: ["-m", "backend.integrations.mcp.servers.file_storage_server"]
+      env:
+        S3_BUCKET: "${S3_BUCKET}"
+        S3_REGION: "${S3_REGION}"
+      description: "File storage access (CSV, Parquet, etc.)"
+      install: "pip install pandas pyarrow boto3 (optional for S3)"
+
   # ===========================================================================
   # SMITHERY (OPTIONAL for dev/testing)
   # ===========================================================================
@@ -84,6 +110,32 @@ server_profiles:
       description: "Jira API via Smithery (hosted)"
       install: "npm install -g @smithery/cli"
       note: "Free <10k requests/month, then pricing applies"
+
+    python_executor:
+      command: "python"
+      args: ["-m", "backend.integrations.mcp.servers.python_executor_server"]
+      env:
+        E2B_API_KEY: "${E2B_API_KEY}"
+      description: "Python code execution using E2B cloud sandboxes (secure, isolated)"
+      install: "pip install e2b-code-interpreter"
+      note: "Get API key at https://e2b.dev - same sandboxing as Lovable and other AI platforms"
+
+    database:
+      command: "python"
+      args: ["-m", "backend.integrations.mcp.servers.database_server"]
+      env:
+        DATABASE_URL: "${DATABASE_URL}"
+      description: "Database access (read-only SQL queries)"
+      install: "pip install sqlalchemy"
+
+    file_storage:
+      command: "python"
+      args: ["-m", "backend.integrations.mcp.servers.file_storage_server"]
+      env:
+        S3_BUCKET: "${S3_BUCKET}"
+        S3_REGION: "${S3_REGION}"
+      description: "File storage access (CSV, Parquet, etc.)"
+      install: "pip install pandas pyarrow boto3 (optional for S3)"
 
 # =============================================================================
 # Role-Based Tool Mappings (same for both profiles)
@@ -271,6 +323,94 @@ roles:
         - add_issue_comment
         - get_issue
         - list_issues
+
+  # Data Scientist: Statistical analysis, model development, data exploration
+  data_scientist:
+    mcp_servers:
+      - python_executor
+      - database
+      - file_storage
+    tools:
+      python_executor:
+        - execute_code
+        - install_package
+        - run_script
+        - get_environment
+      database:
+        - execute_query
+        - get_schema
+        - list_tables
+        - get_table_sample
+        - describe_table
+      file_storage:
+        - read_file
+        - read_csv
+        - read_parquet
+        - list_files
+
+  # Data Engineer: Data pipelines, data quality, infrastructure
+  data_engineer:
+    mcp_servers:
+      - python_executor
+      - database
+      - file_storage
+    tools:
+      python_executor:
+        - execute_code
+        - run_script
+        - get_environment
+      database:
+        - execute_query
+        - get_schema
+        - list_tables
+        - get_table_sample
+        - describe_table
+      file_storage:
+        - read_file
+        - read_csv
+        - read_parquet
+        - list_files
+        - write_file
+
+  # ML Engineer: Model deployment, MLOps, production systems
+  ml_engineer:
+    mcp_servers:
+      - python_executor
+      - database
+      - file_storage
+    tools:
+      python_executor:
+        - execute_code
+        - install_package
+        - run_script
+        - get_environment
+      database:
+        - execute_query
+        - get_schema
+        - list_tables
+      file_storage:
+        - read_file
+        - read_parquet
+        - list_files
+        - write_file
+
+  # AI/ML Project Manager: Specialized PM for AI/ML projects
+  ai_ml_project_manager:
+    mcp_servers:
+      - github
+      - jira
+    tools:
+      github:
+        - list_issues
+        - create_issue
+        - get_repository
+        - search_code
+      jira:
+        - create_ticket
+        - get_ticket
+        - update_ticket
+        - add_comment
+        - search_tickets
 
 # Alternative naming (aliases)
 aliases:

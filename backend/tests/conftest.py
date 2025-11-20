@@ -74,6 +74,9 @@ async def test_db() -> AsyncGenerator[AsyncSession, None]:
             try:
                 from sqlalchemy import text
                 # Order matters due to foreign key constraints
+                await session.execute(text("DELETE FROM coherence_metrics"))
+                await session.execute(text("DELETE FROM task_dependencies"))
+                await session.execute(text("DELETE FROM dynamic_tasks"))
                 await session.execute(text("DELETE FROM conversation_events"))
                 await session.execute(text("DELETE FROM agent_conversations"))
                 await session.execute(text("DELETE FROM routing_rules"))

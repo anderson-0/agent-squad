@@ -127,7 +127,7 @@ async def _cleanup_old_conversations(days_old: int) -> dict:
 
     cutoff_date = datetime.utcnow() - timedelta(days=days_old)
 
-    async with get_async_session_context() as db:
+        async with get_db_context() as db:
         # Find old conversations in terminal states
         stmt = select(Conversation).where(
             and_(
@@ -216,7 +216,7 @@ async def _generate_timeout_report(days: int) -> dict:
 
     start_date = datetime.utcnow() - timedelta(days=days)
 
-    async with get_async_session_context() as db:
+        async with get_db_context() as db:
         # Count timeout events
         stmt = select(func.count(ConversationEvent.id)).where(
             and_(

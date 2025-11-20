@@ -16,6 +16,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   # Redis Cache
   redis:
@@ -30,49 +31,100 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
+    restart: unless-stopped
+
+  # NATS JetStream (Message Bus for Agent Communication)
+  nats:
+    image: nats:2.10.7-alpine
+    container_name: agent-squad-nats
+    ports:
+      - "4222:4222"    # Client connections
+      - "8222:8222"    # HTTP monitoring
+    command:
+      - "-js"           # Enable JetStream
+      - "-m"            # Enable monitoring
+      - "8222"
+    volumes:
+      - nats_data:/data
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8222/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
 
   # Backend API
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: agent-squad-backend
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/agent_squad_dev
-      REDIS_URL: redis://redis:6379
-      SECRET_KEY: dev-secret-key-change-in-production
+      # Application
       ENV: development
       DEBUG: "true"
+      APP_NAME: "Agent Squad"
+      API_V1_PREFIX: /api/v1
       HOST: 0.0.0.0
       PORT: "8000"
-      PYTHONPATH: /workspace
+      PYTHONPATH: /app
+
+      # Database
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/agent_squad_dev
+
+      # Redis Cache
+      REDIS_URL: redis://redis:6379/0
+      CACHE_ENABLED: "true"
+      CACHE_DEFAULT_TTL: "300"
+      CACHE_PREFIX: agent_squad
+      CACHE_METRICS_ENABLED: "true"
+
+      # NATS Message Bus
+      MESSAGE_BUS: nats
+      NATS_URL: nats://nats:4222
+
+      # Security
+      SECRET_KEY: dev-secret-key-change-in-production
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+      REFRESH_TOKEN_EXPIRE_DAYS: "7"
+
+      # CORS
       ALLOWED_ORIGINS: http://localhost:3000,http://localhost:8000
-      # Jira Configuration (for real integration tests)
-      JIRA_URL: http://jira:8080
-      JIRA_USERNAME: admin@example.com
-      JIRA_API_TOKEN: admin123
-      # Confluence Configuration (for real integration tests)
-      CONFLUENCE_URL: http://confluence:8090
-      CONFLUENCE_USERNAME: admin@example.com
-      CONFLUENCE_API_TOKEN: admin123
+
+      # Ollama (Local LLM)
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      OLLAMA_MODEL: llama3.2
+
+      # Logging
+      LOG_LEVEL: INFO
+      LOG_FORMAT: json
+
+      # Features
+      ENABLE_METRICS: "true"
+      ENABLE_WEBHOOKS: "true"
     ports:
       - "8000:8000"
     volumes:
-      - .:/workspace
-      - /workspace/backend/__pycache__
-    working_dir: /workspace/backend
+      - .:/app
+      - /app/backend/__pycache__
+      - /app/.pytest_cache
+    working_dir: /app/backend
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      nats:
+        condition: service_healthy
+    restart: unless-stopped
     command: sh -c "alembic upgrade head && uvicorn backend.core.app:app --host 0.0.0.0 --port 8000 --reload"
 
   # Frontend Next.js App
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: frontend/Dockerfile
     container_name: agent-squad-frontend
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000
@@ -85,108 +137,13 @@ services:
       - /app/.next
     depends_on:
       - backend
-    command: npm run dev
-
-  # PostgreSQL for Jira/Confluence
-  jira-postgres:
-    image: postgres:15-alpine
-    container_name: agent-squad-jira-postgres
-    environment:
-      POSTGRES_USER: jira
-      POSTGRES_PASSWORD: jira_password
-      POSTGRES_DB: jiradb
-    ports:
-      - "5433:5432"
-    volumes:
-      - jira_postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U jira"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  confluence-postgres:
-    image: postgres:15-alpine
-    container_name: agent-squad-confluence-postgres
-    environment:
-      POSTGRES_USER: confluence
-      POSTGRES_PASSWORD: confluence_password
-      POSTGRES_DB: confluencedb
-    ports:
-      - "5434:5432"
-    volumes:
-      - confluence_postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U confluence"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Jira Software
-  jira:
-    image: atlassian/jira-software:9.12.0
-    container_name: agent-squad-jira
-    environment:
-      - ATL_PROXY_NAME=localhost
-      - ATL_PROXY_PORT=8080
-      - ATL_TOMCAT_SCHEME=http
-      - ATL_TOMCAT_SECURE=false
-      - JVM_MINIMUM_MEMORY=2048m
-      - JVM_MAXIMUM_MEMORY=4096m
-      - ATL_JDBC_URL=jdbc:postgresql://jira-postgres:5432/jiradb
-      - ATL_JDBC_USER=jira
-      - ATL_JDBC_PASSWORD=jira_password
-      - ATL_DB_DRIVER=org.postgresql.Driver
-      - ATL_DB_TYPE=postgres72
-    ports:
-      - "8080:8080"
-    volumes:
-      - jira_data:/var/atlassian/application-data/jira
-    depends_on:
-      jira-postgres:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/status"]
-      interval: 30s
-      timeout: 10s
-      retries: 10
-      start_period: 300s
-
-  # Confluence
-  confluence:
-    image: atlassian/confluence:8.5.0
-    container_name: agent-squad-confluence
-    environment:
-      - ATL_PROXY_NAME=localhost
-      - ATL_PROXY_PORT=8090
-      - ATL_TOMCAT_SCHEME=http
-      - ATL_TOMCAT_SECURE=false
-      - JVM_MINIMUM_MEMORY=2048m
-      - JVM_MAXIMUM_MEMORY=4096m
-      - ATL_JDBC_URL=jdbc:postgresql://confluence-postgres:5432/confluencedb
-      - ATL_JDBC_USER=confluence
-      - ATL_JDBC_PASSWORD=confluence_password
-      - ATL_DB_DRIVER=org.postgresql.Driver
-      - ATL_DB_TYPE=postgresql
-    ports:
-      - "8090:8090"
-      - "8091:8091"
-    volumes:
-      - confluence_data:/var/atlassian/application-data/confluence
-    depends_on:
-      confluence-postgres:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8090/status"]
-      interval: 30s
-      timeout: 10s
-      retries: 10
-      start_period: 300s
+    restart: unless-stopped
+    command: bun run dev
 
 volumes:
   postgres_data:
+    driver: local
   redis_data:
-  jira_postgres_data:
-  confluence_postgres_data:
-  jira_data:
-  confluence_data:
+    driver: local
+  nats_data:
+    driver: local

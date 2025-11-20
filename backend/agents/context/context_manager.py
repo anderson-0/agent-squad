@@ -14,9 +14,9 @@ from datetime import datetime, timedelta
 from backend.agents.context.rag_service import RAGService
 from backend.agents.context.memory_store import MemoryStore
 from backend.agents.communication.history_manager import HistoryManager
-from backend.database import async_session
+from backend.core.database import AsyncSessionLocal
 from backend.models.squad import Squad
-from backend.models.agent import Agent
+# Agent model doesn't exist - using SquadMember instead
 from sqlalchemy import select
 
 
@@ -377,7 +377,7 @@ class ContextManager:
 
     async def _get_squad_metadata(self, squad_id: UUID) -> Dict[str, Any]:
         """Get squad metadata from database"""
-        async with async_session() as session:
+        async with AsyncSessionLocal() as session:
             result = await session.execute(
                 select(Squad).where(Squad.id == squad_id)
             )
@@ -396,9 +396,11 @@ class ContextManager:
 
     async def _get_agent_metadata(self, agent_id: UUID) -> Dict[str, Any]:
         """Get agent metadata from database"""
-        async with async_session() as session:
+        from backend.models.squad import SquadMember
+        
+        async with AsyncSessionLocal() as session:
             result = await session.execute(
-                select(Agent).where(Agent.id == agent_id)
+                select(SquadMember).where(SquadMember.id == agent_id)
             )
             agent = result.scalar_one_or_none()
 
