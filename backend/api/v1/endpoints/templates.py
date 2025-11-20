@@ -8,7 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.core.database import get_async_session
+from backend.core.database import get_db
 from backend.services.template_service import TemplateService
 from backend.schemas.template import (
     TemplateListResponse,
@@ -26,7 +26,7 @@ router = APIRouter(prefix="/templates", tags=["templates"])
 async def list_templates(
     category: Optional[str] = Query(None, description="Filter by category (development, support, sales, etc.)"),
     featured_only: bool = Query(False, description="Show only featured templates"),
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     List all available squad templates
@@ -65,7 +65,7 @@ async def list_templates(
 @router.get("/{template_id}", response_model=TemplateDetailResponse)
 async def get_template(
     template_id: UUID,
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Get detailed information about a template
@@ -100,7 +100,7 @@ async def get_template(
 @router.get("/by-slug/{slug}", response_model=TemplateDetailResponse)
 async def get_template_by_slug(
     slug: str,
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Get template by slug
@@ -132,7 +132,7 @@ async def get_template_by_slug(
 async def apply_template(
     template_id: UUID,
     request: ApplyTemplateRequest,
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Apply a template to a squad
@@ -186,7 +186,7 @@ async def apply_template(
 @router.post("/", response_model=TemplateDetailResponse, status_code=201)
 async def create_template(
     request: CreateTemplateRequest,
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Create a new squad template
@@ -236,7 +236,7 @@ async def create_template(
 async def update_template(
     template_id: UUID,
     request: UpdateTemplateRequest,
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Update a template
@@ -273,7 +273,7 @@ async def update_template(
 @router.delete("/{template_id}", status_code=204)
 async def delete_template(
     template_id: UUID,
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Delete a template (soft delete)

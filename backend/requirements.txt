@@ -20,7 +20,10 @@ stripe==7.4.0
 # AI & LLM
 openai==1.58.1
 anthropic==0.42.0
-pinecone-client==5.0.1
+pinecone==5.0.1
+
+# Multi-Agent Framework
+agno==2.2.0
 
 # Workflow Orchestration
 inngest==0.3.2
@@ -43,6 +46,7 @@ celery==5.3.4
 # Logging & Monitoring
 structlog==23.2.0
 prometheus-client==0.19.0
+rich==13.7.0  # CLI visualization for metrics dashboard
 
 # Testing
 pytest==7.4.3

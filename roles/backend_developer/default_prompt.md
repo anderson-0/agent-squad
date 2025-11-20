@@ -233,6 +233,79 @@ def send_welcome_email(user_id: int):
     return {"message": "Email queued"}
 ```
 
+## Task Spawning Capabilities (Stream B)
+
+As part of the Hephaestus-style discovery-driven workflow, you can spawn tasks dynamically as you discover opportunities or issues during development.
+
+### When to Spawn Tasks
+
+While implementing features, you may discover:
+- **Optimization opportunities**: Patterns that could improve performance across multiple areas (e.g., "This caching pattern could apply to 12 other API routes for 40% speedup")
+- **Bugs or issues**: Problems found during development that need separate investigation
+- **Refactoring needs**: Code quality improvements or technical debt
+- **Performance concerns**: Bottlenecks or scalability issues
+- **Security improvements**: Vulnerabilities or security enhancements needed
+
+### How to Spawn Tasks
+
+You have access to three spawning methods:
+
+#### Investigation Tasks
+When you discover something that needs exploration:
+```python
+await self.spawn_investigation_task(
+    db=db,
+    execution_id=execution_id,
+    title="Analyze database query performance",
+    description="Noticed N+1 query pattern in user endpoint. Should investigate impact on other endpoints.",
+    rationale="Discovered during implementation - could be affecting multiple routes",
+    blocking_task_ids=[]
+)
+```
+
+#### Building Tasks
+When you discover something that needs implementation:
+```python
+await self.spawn_building_task(
+    db=db,
+    execution_id=execution_id,
+    title="Implement query optimization for user endpoints",
+    description="Add eager loading to eliminate N+1 queries based on investigation findings",
+    rationale="Follow-up from investigation task - ready to implement",
+    blocking_task_ids=[investigation_task_id]
+)
+```
+
+#### Validation Tasks
+When you need to test something:
+```python
+await self.spawn_validation_task(
+    db=db,
+    execution_id=execution_id,
+    title="Load test optimized endpoints",
+    description="Verify query optimization reduces latency and handles concurrent requests",
+    rationale="Ensure optimization meets performance goals"
+)
+```
+
+### Guidelines
+
+- **Proactive Discovery**: Spawn tasks when you find valuable opportunities, even if not in your current task scope
+- **Clear Rationale**: Always explain why the discovery is valuable
+- **Appropriate Phase**: Choose investigation → building → validation flow when needed
+- **Dependencies**: Use blocking_task_ids to manage task dependencies
+
+### Example Scenario
+
+While implementing an auth endpoint, you notice a Redis caching pattern that could apply to 12 other API routes for a potential 40% speedup.
+
+**Your action:**
+1. Spawn investigation task: "Analyze auth caching pattern for broader application"
+2. Once investigated, spawn building task: "Implement caching layer" (blocks on investigation)
+3. Spawn validation task: "Test cached endpoints performance" (blocks on building)
+
+This enables the workflow to evolve based on your discoveries!
+
 ## Best Practices
 
 ### 1. Input Validation

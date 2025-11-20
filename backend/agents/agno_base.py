@@ -25,9 +25,13 @@ from agno.agent import Agent as AgnoAgent
 from agno.models.anthropic import Claude
 from agno.models.openai import OpenAIChat
 from agno.models.groq import Groq
+from agno.models.ollama import Ollama
 
 from backend.core.agno_config import get_agno_db
 from backend.core.config import settings
+from backend.models.llm_cost_tracking import calculate_cost
+from backend.models import LLMCostEntry
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +45,7 @@ class LLMProvider(str, Enum):
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
     GROQ = "groq"
+    OLLAMA = "ollama"
 
 
 class AgentConfig(BaseModel):
@@ -153,6 +158,7 @@ class LLMProviderFactory:
             LLMProvider.ANTHROPIC: LLMProviderFactory._create_claude,
             LLMProvider.OPENAI: LLMProviderFactory._create_openai,
             LLMProvider.GROQ: LLMProviderFactory._create_groq,
+            LLMProvider.OLLAMA: LLMProviderFactory._create_ollama,
         }
 
         creator = providers.get(config.llm_provider)
@@ -198,6 +204,20 @@ class LLMProviderFactory:
             api_key=settings.GROQ_API_KEY,
             temperature=config.temperature,
             max_tokens=config.max_tokens,
+        )
+
+    @staticmethod
+    def _create_ollama(config: AgentConfig) -> Ollama:
+        """Create Ollama model (local LLM)"""
+        # Ollama doesn't require API key - runs locally
+        # Temperature and other model parameters go in the options dict
+        return Ollama(
+            id=config.llm_model or settings.OLLAMA_MODEL,
+            host=settings.OLLAMA_BASE_URL,
+            options={
+                "temperature": config.temperature,
+                "num_predict": config.max_tokens if config.max_tokens else None,
+            }
         )
 
 
@@ -628,6 +648,13 @@ class AgnoSquadAgent(ABC):
         message: str,
         context: Optional[Dict[str, Any]] = None,
         conversation_history: Optional[List[ConversationMessage]] = None,
+        squad_id: Optional[UUID] = None,
+        user_id: Optional[UUID] = None,
+        organization_id: Optional[UUID] = None,
+        task_execution_id: Optional[UUID] = None,
+        conversation_id: Optional[UUID] = None,
+        track_cost: bool = True,
+        db: Optional[Any] = None,
     ) -> AgentResponse:
         """
         Process a message and return a response.
@@ -639,12 +666,21 @@ class AgnoSquadAgent(ABC):
             message: User message to process
             context: Additional context (task details, RAG results, etc.)
             conversation_history: Ignored (Agno manages history automatically)
+            squad_id: Optional squad ID for cost tracking
+            user_id: Optional user ID for cost tracking
+            organization_id: Optional organization ID for cost tracking
+            task_execution_id: Optional task execution ID for cost tracking
+            conversation_id: Optional conversation ID for cost tracking
+            track_cost: Whether to track LLM costs (default: True)
+            db: Optional database session for cost tracking
 
         Returns:
             AgentResponse with content and metadata
 
         Design Pattern: Template Method
         """
+        start_time = datetime.now()
+
         try:
             # Build enhanced message with context
             enhanced_message = self._build_message_with_context(message, context)
@@ -652,12 +688,40 @@ class AgnoSquadAgent(ABC):
             # Run Agno agent
             agno_response = self.agent.run(enhanced_message)
 
+            # Calculate response time
+            response_time_ms = int((datetime.now() - start_time).total_seconds() * 1000)
+
+            # Extract token usage from response (if available)
+            prompt_tokens, completion_tokens = self._extract_token_usage(agno_response)
+
+            # Track cost if requested and DB session provided
+            if track_cost and db is not None:
+                await self._track_llm_cost(
+                    db=db,
+                    prompt_tokens=prompt_tokens,
+                    completion_tokens=completion_tokens,
+                    response_time_ms=response_time_ms,
+                    squad_id=squad_id,
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    task_execution_id=task_execution_id,
+                    conversation_id=conversation_id,
+                )
+
             # Convert to our response format (Adapter pattern)
             response = self._convert_agno_response(agno_response)
 
+            # Add token usage to metadata
+            response.metadata.update({
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": prompt_tokens + completion_tokens,
+                "response_time_ms": response_time_ms,
+            })
+
             logger.debug(
                 f"Agent {self._format_agent_name()} processed message "
-                f"(length: {len(message)})"
+                f"(length: {len(message)}, tokens: {prompt_tokens + completion_tokens})"
             )
 
             return response
@@ -744,6 +808,136 @@ class AgnoSquadAgent(ABC):
                 "agent_role": self.config.role,
             }
         )
+
+    def _extract_token_usage(self, agno_response: Any) -> tuple[int, int]:
+        """
+        Extract token usage from Agno response.
+
+        Different LLM providers return tokens differently.
+        This method attempts to extract them from various response formats.
+
+        Args:
+            agno_response: Response from Agno agent
+
+        Returns:
+            Tuple of (prompt_tokens, completion_tokens)
+        """
+        prompt_tokens = 0
+        completion_tokens = 0
+
+        try:
+            # Try to get metrics from response
+            if hasattr(agno_response, 'metrics'):
+                metrics = agno_response.metrics
+                if metrics:
+                    prompt_tokens = metrics.get('input_tokens', 0) or metrics.get('prompt_tokens', 0)
+                    completion_tokens = metrics.get('output_tokens', 0) or metrics.get('completion_tokens', 0)
+
+            # Try alternative attributes
+            elif hasattr(agno_response, 'usage'):
+                usage = agno_response.usage
+                if usage:
+                    prompt_tokens = getattr(usage, 'prompt_tokens', 0) or getattr(usage, 'input_tokens', 0)
+                    completion_tokens = getattr(usage, 'completion_tokens', 0) or getattr(usage, 'output_tokens', 0)
+
+            # For Ollama (which doesn't report tokens), estimate
+            # Average ~4 characters per token (rough estimate)
+            if prompt_tokens == 0 and completion_tokens == 0 and self.config.llm_provider == LLMProvider.OLLAMA:
+                # This is a rough estimate - Ollama doesn't provide actual token counts
+                completion_tokens = len(agno_response.content) // 4
+
+            logger.debug(f"Extracted tokens: prompt={prompt_tokens}, completion={completion_tokens}")
+
+        except Exception as e:
+            logger.warning(f"Could not extract token usage: {e}")
+            # Return zeros if extraction fails
+            pass
+
+        return prompt_tokens, completion_tokens
+
+    async def _track_llm_cost(
+        self,
+        db: Any,  # AsyncSession
+        prompt_tokens: int,
+        completion_tokens: int,
+        response_time_ms: int,
+        squad_id: Optional[UUID] = None,
+        user_id: Optional[UUID] = None,
+        organization_id: Optional[UUID] = None,
+        task_execution_id: Optional[UUID] = None,
+        conversation_id: Optional[UUID] = None,
+    ) -> None:
+        """
+        Track LLM cost in database.
+
+        Args:
+            db: Database session (AsyncSession)
+            prompt_tokens: Number of input tokens
+            completion_tokens: Number of output tokens
+            response_time_ms: Response time in milliseconds
+            squad_id: Optional squad ID
+            user_id: Optional user ID
+            organization_id: Optional organization ID
+            task_execution_id: Optional task execution ID
+            conversation_id: Optional conversation ID
+        """
+        try:
+            # Calculate cost
+            total_tokens = prompt_tokens + completion_tokens
+            cost_data = calculate_cost(
+                provider=self.config.llm_provider.value,
+                model=self.config.llm_model,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+            )
+
+            # Create cost entry
+            cost_entry = LLMCostEntry(
+                id=uuid.uuid4(),
+                provider=self.config.llm_provider.value,
+                model=self.config.llm_model,
+                squad_id=squad_id,
+                agent_id=self.agent_id,
+                user_id=user_id,
+                organization_id=organization_id,
+                task_execution_id=task_execution_id,
+                conversation_id=conversation_id,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                total_tokens=total_tokens,
+                prompt_cost_usd=cost_data["prompt_cost_usd"],
+                completion_cost_usd=cost_data["completion_cost_usd"],
+                total_cost_usd=cost_data["total_cost_usd"],
+                prompt_price_per_1m=cost_data["prompt_price_per_1m"],
+                completion_price_per_1m=cost_data["completion_price_per_1m"],
+                temperature=self.config.temperature,
+                max_tokens=self.config.max_tokens,
+                finish_reason=None,  # Could be extracted from response
+                response_time_ms=response_time_ms,
+                extra_metadata={
+                    "role": self.config.role,
+                    "specialization": self.config.specialization,
+                    "session_id": self.agent.session_id,
+                    "framework": "agno",
+                },
+            )
+
+            # Add to database
+            db.add(cost_entry)
+            await db.commit()
+
+            logger.info(
+                f"Tracked LLM cost: {self.config.llm_provider.value}/{self.config.llm_model} "
+                f"- {total_tokens} tokens = ${cost_data['total_cost_usd']:.6f}"
+            )
+
+        except Exception as e:
+            logger.error(f"Failed to track LLM cost: {e}", exc_info=True)
+            # Don't raise - cost tracking failures shouldn't break agent execution
+            try:
+                await db.rollback()
+            except Exception:
+                pass
 
     # ============================================================================
     # Message Bus Integration (Inter-Agent Communication)
@@ -840,6 +1034,175 @@ class AgnoSquadAgent(ABC):
             task_execution_id=task_execution_id,
             db=db,
         )
+
+    # ============================================================================
+    # Task Spawning Methods (Stream B: Agent Task Spawning Interface)
+    # ============================================================================
+    
+    async def spawn_investigation_task(
+        self,
+        db: Any,  # AsyncSession
+        execution_id: UUID,
+        title: str,
+        description: str,
+        rationale: str,
+        blocking_task_ids: Optional[List[UUID]] = None,
+    ) -> Any:  # DynamicTask
+        """
+        Spawn a new investigation phase task.
+        
+        Investigation tasks are for exploring, analyzing, and discovering.
+        Used when agents find opportunities that need investigation.
+        
+        Example:
+            "Analyze auth caching pattern - could apply to 12 other API routes for 40% speedup"
+        
+        Args:
+            db: Database session (AsyncSession)
+            execution_id: Parent task execution ID
+            title: Task title
+            description: Task description
+            rationale: Why this task is being created (required for investigation)
+            blocking_task_ids: Optional list of task IDs this blocks
+            
+        Returns:
+            Created DynamicTask instance
+            
+        Raises:
+            ValueError: If agent_id not configured or execution_id invalid
+        """
+        if not self.agent_id:
+            raise ValueError("agent_id must be configured to spawn tasks")
+        
+        from backend.agents.task_spawning.agent_task_spawner import get_agent_task_spawner
+        
+        spawner = get_agent_task_spawner()
+        
+        task = await spawner.spawn_investigation_task(
+            db=db,
+            agent_id=self.agent_id,
+            execution_id=execution_id,
+            title=title,
+            description=description,
+            rationale=rationale,
+            blocking_task_ids=blocking_task_ids,
+        )
+        
+        logger.info(
+            f"Agent {self._format_agent_name()} spawned investigation task: {task.id} - {title[:50]}"
+        )
+        
+        return task
+    
+    async def spawn_building_task(
+        self,
+        db: Any,  # AsyncSession
+        execution_id: UUID,
+        title: str,
+        description: str,
+        rationale: Optional[str] = None,
+        blocking_task_ids: Optional[List[UUID]] = None,
+    ) -> Any:  # DynamicTask
+        """
+        Spawn a new building/implementation phase task.
+        
+        Building tasks are for implementing, building, and creating.
+        Used when agents need to implement something discovered or planned.
+        
+        Example:
+            "Implement caching layer for auth routes"
+        
+        Args:
+            db: Database session (AsyncSession)
+            execution_id: Parent task execution ID
+            title: Task title
+            description: Task description
+            rationale: Optional reason why this task was created
+            blocking_task_ids: Optional list of task IDs this blocks
+            
+        Returns:
+            Created DynamicTask instance
+            
+        Raises:
+            ValueError: If agent_id not configured or execution_id invalid
+        """
+        if not self.agent_id:
+            raise ValueError("agent_id must be configured to spawn tasks")
+        
+        from backend.agents.task_spawning.agent_task_spawner import get_agent_task_spawner
+        
+        spawner = get_agent_task_spawner()
+        
+        task = await spawner.spawn_building_task(
+            db=db,
+            agent_id=self.agent_id,
+            execution_id=execution_id,
+            title=title,
+            description=description,
+            rationale=rationale,
+            blocking_task_ids=blocking_task_ids,
+        )
+        
+        logger.info(
+            f"Agent {self._format_agent_name()} spawned building task: {task.id} - {title[:50]}"
+        )
+        
+        return task
+    
+    async def spawn_validation_task(
+        self,
+        db: Any,  # AsyncSession
+        execution_id: UUID,
+        title: str,
+        description: str,
+        rationale: Optional[str] = None,
+        blocking_task_ids: Optional[List[UUID]] = None,
+    ) -> Any:  # DynamicTask
+        """
+        Spawn a new validation/testing phase task.
+        
+        Validation tasks are for testing, verifying, and validating.
+        Used when agents need to test or verify work.
+        
+        Example:
+            "Test API endpoints with new caching layer"
+        
+        Args:
+            db: Database session (AsyncSession)
+            execution_id: Parent task execution ID
+            title: Task title
+            description: Task description
+            rationale: Optional reason why this task was created
+            blocking_task_ids: Optional list of task IDs this blocks
+            
+        Returns:
+            Created DynamicTask instance
+            
+        Raises:
+            ValueError: If agent_id not configured or execution_id invalid
+        """
+        if not self.agent_id:
+            raise ValueError("agent_id must be configured to spawn tasks")
+        
+        from backend.agents.task_spawning.agent_task_spawner import get_agent_task_spawner
+        
+        spawner = get_agent_task_spawner()
+        
+        task = await spawner.spawn_validation_task(
+            db=db,
+            agent_id=self.agent_id,
+            execution_id=execution_id,
+            title=title,
+            description=description,
+            rationale=rationale,
+            blocking_task_ids=blocking_task_ids,
+        )
+        
+        logger.info(
+            f"Agent {self._format_agent_name()} spawned validation task: {task.id} - {title[:50]}"
+        )
+        
+        return task
 
     async def receive_messages(
         self,

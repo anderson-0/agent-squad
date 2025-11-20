@@ -365,6 +365,79 @@ test('user test')
 - Collaborative, not confrontational
 - Detail-oriented
 
+## Task Spawning Capabilities (Stream B)
+
+As part of the Hephaestus-style discovery-driven workflow, you can spawn tasks dynamically as you discover issues, optimization opportunities, or improvements during testing.
+
+### When to Spawn Tasks
+
+During testing, you may discover:
+- **Bugs**: Issues that need investigation or fixing
+- **Optimization opportunities**: Performance improvements discovered during testing (e.g., "This API endpoint is slow - caching could provide 40% speedup")
+- **Security vulnerabilities**: Security issues that need separate attention
+- **Testability improvements**: Areas where testability could be enhanced
+- **Refactoring needs**: Code quality issues that affect maintainability
+
+### How to Spawn Tasks
+
+You have access to three spawning methods:
+
+#### Investigation Tasks
+When you discover something that needs exploration:
+```python
+await self.spawn_investigation_task(
+    db=db,
+    execution_id=execution_id,
+    title="Investigate slow API endpoint performance",
+    description="Load testing revealed endpoint takes 2s under moderate load. Need to investigate bottlenecks.",
+    rationale="Discovered during validation phase - could impact user experience",
+    blocking_task_ids=[]
+)
+```
+
+#### Building Tasks
+When you discover something that needs implementation:
+```python
+await self.spawn_building_task(
+    db=db,
+    execution_id=execution_id,
+    title="Implement caching for slow endpoint",
+    description="Add Redis caching based on investigation findings to improve performance",
+    rationale="Follow-up from investigation task - ready to implement fix",
+    blocking_task_ids=[investigation_task_id]
+)
+```
+
+#### Validation Tasks
+When you need additional testing:
+```python
+await self.spawn_validation_task(
+    db=db,
+    execution_id=execution_id,
+    title="Re-test endpoint after caching implementation",
+    description="Verify caching improves performance and doesn't break functionality",
+    rationale="Ensure fix meets performance goals from original investigation"
+)
+```
+
+### Guidelines
+
+- **Proactive Discovery**: Spawn investigation tasks for bugs or performance issues you find
+- **Clear Documentation**: Document what you found, reproduction steps, and impact
+- **Appropriate Phase**: Use investigation → building → validation flow for fixes
+- **Severity Consideration**: Higher severity bugs should spawn investigation tasks immediately
+
+### Example Scenario
+
+While testing API endpoints, you notice a caching pattern used in one endpoint that could apply to 12 others, potentially providing 40% speedup.
+
+**Your action:**
+1. Spawn investigation task: "Analyze caching pattern for broader application"
+2. Once investigated, spawn building task: "Implement caching layer" (blocks on investigation)
+3. Spawn validation task: "Performance test cached endpoints" (blocks on building)
+
+This enables quality improvements to be discovered and tracked through the workflow!
+
 ## Best Practices
 
 ### 1. Understand the User

@@ -19,6 +19,23 @@ from backend.schemas.agent_message import (
     HumanInterventionRequired,
     Standup,
 )
+from backend.agents.guardian import (
+    CoherenceScore,
+    CoherenceScorer,
+    get_coherence_scorer,
+    WorkflowHealth,
+    WorkflowHealthMonitor,
+    get_workflow_health_monitor,
+    Anomaly,
+    AdvancedAnomalyDetector,
+    get_anomaly_detector,
+    Recommendation,
+    RecommendationsEngine,
+    get_recommendations_engine,
+)
+from backend.models.workflow import WorkflowPhase, DynamicTask
+from backend.models.guardian import CoherenceMetrics
+from backend.agents.discovery import Discovery
 
 
 class TicketReview(Dict[str, Any]):
@@ -54,12 +71,13 @@ class AgnoProjectManagerAgent(AgnoSquadAgent):
 
     def get_capabilities(self) -> List[str]:
         """
-        Return list of PM capabilities
+        Return list of PM capabilities (Orchestrator + Guardian)
 
         Returns:
             List of capability names
         """
         return [
+            # Orchestration capabilities
             "receive_webhook_notification",
             "review_ticket_with_tech_lead",
             "estimate_effort",
@@ -72,6 +90,16 @@ class AgnoProjectManagerAgent(AgnoSquadAgent):
             "escalate_to_human",
             "provide_status_update",
             "communicate_with_stakeholder",
+            # Guardian capabilities (Stream C)
+            "check_phase_coherence",
+            "monitor_workflow_health",
+            "validate_task_relevance",
+            "validate_discovery_quality",
+            "orchestrate_with_guardian_oversight",
+            # Advanced Guardian capabilities (Stream G)
+            "detect_workflow_anomalies",
+            "generate_guardian_recommendations",
+            "calculate_detailed_coherence",
         ]
 
     async def receive_webhook_notification(
@@ -535,3 +563,354 @@ class AgnoProjectManagerAgent(AgnoSquadAgent):
     def _extract_total_hours(self, content: str) -> Optional[float]:
         """Extract total hours from response"""
         return self._extract_hours(content, "total")
+
+    # ============================================================================
+    # Guardian Capabilities (Stream C: PM-as-Guardian System)
+    # ============================================================================
+
+    async def check_phase_coherence(
+        self,
+        db: Any,  # AsyncSession
+        execution_id: UUID,
+        agent_id: UUID,
+        phase: WorkflowPhase,
+    ) -> CoherenceScore:
+        """
+        Check if agent's work aligns with the current phase.
+        
+        Args:
+            db: Database session
+            execution_id: Task execution ID
+            agent_id: Agent being monitored
+            phase: Current workflow phase
+            
+        Returns:
+            CoherenceScore with overall score and detailed metrics
+        """
+        if not self.agent_id:
+            raise ValueError("PM agent_id must be configured to monitor coherence")
+        
+        scorer = get_coherence_scorer()
+        
+        coherence = await scorer.calculate_coherence(
+            db=db,
+            agent_id=agent_id,
+            execution_id=execution_id,
+            phase=phase,
+        )
+        
+        # Store coherence metrics in database
+        coherence_metric = CoherenceMetrics(
+            execution_id=execution_id,
+            agent_id=agent_id,
+            monitored_by_pm_id=self.agent_id,
+            phase=phase.value,
+            coherence_score=coherence.overall_score,
+            metrics=coherence.metrics,
+            anomaly_detected=coherence.overall_score < 0.5,
+            calculated_at=coherence.calculated_at,
+        )
+        db.add(coherence_metric)
+        await db.commit()
+        
+        logger.info(
+            f"PM {self._format_agent_name()} checked coherence for agent {agent_id}: "
+            f"{coherence.overall_score:.2f} (phase={phase.value})"
+        )
+        
+        return coherence
+
+    async def monitor_workflow_health(
+        self,
+        db: Any,  # AsyncSession
+        execution_id: UUID,
+    ) -> WorkflowHealth:
+        """
+        Monitor overall workflow health.
+        
+        Args:
+            db: Database session
+            execution_id: Task execution ID
+            
+        Returns:
+            WorkflowHealth with health metrics, anomalies, and recommendations
+        """
+        if not self.agent_id:
+            raise ValueError("PM agent_id must be configured to monitor health")
+        
+        monitor = get_workflow_health_monitor()
+        
+        health = await monitor.calculate_health(
+            db=db,
+            execution_id=execution_id,
+        )
+        
+        logger.info(
+            f"PM {self._format_agent_name()} monitored workflow health for execution {execution_id}: "
+            f"{health.overall_score:.2f} ({len(health.anomalies)} anomalies)"
+        )
+        
+        return health
+
+    async def validate_task_relevance(
+        self,
+        db: Any,  # AsyncSession
+        task: DynamicTask,
+        execution_context: Dict[str, Any],
+    ) -> float:
+        """
+        Validate if a spawned task is relevant to the workflow.
+        
+        Args:
+            db: Database session
+            task: DynamicTask to validate
+            execution_context: Context about the execution
+            
+        Returns:
+            Relevance score (0.0-1.0)
+        """
+        # Check if task has rationale (especially important for investigation)
+        if not task.rationale:
+            if task.phase == WorkflowPhase.INVESTIGATION.value:
+                return 0.4  # Investigation tasks need rationale
+            return 0.7  # Other tasks can be lower
+        
+        # Check if rationale is substantial
+        if len(task.rationale) < 20:
+            return 0.5  # Brief rationale = moderate relevance
+        
+        # Check if task title/description are clear
+        if len(task.description) < 10:
+            return 0.5
+        
+        # If task has rationale and clear description, it's likely relevant
+        return 0.85
+
+    async def validate_discovery_quality(
+        self,
+        db: Any,  # AsyncSession
+        discovery: Discovery,
+        agent_id: UUID,
+        phase: WorkflowPhase,
+    ) -> float:
+        """
+        Validate the quality of a discovery made by an agent.
+        
+        Args:
+            db: Database session
+            discovery: Discovery to validate
+            agent_id: Agent that made discovery
+            phase: Current workflow phase
+            
+        Returns:
+            Quality score (0.0-1.0)
+        """
+        # Quality based on discovery value score and confidence
+        base_score = discovery.value_score * discovery.confidence
+        
+        # Boost if discovery type matches phase expectations
+        # Investigation phase expects optimization/bug discoveries
+        if phase == WorkflowPhase.INVESTIGATION:
+            if discovery.type in ["optimization", "bug", "performance"]:
+                base_score = min(base_score * 1.1, 1.0)
+        
+        # Boost if description is detailed
+        if len(discovery.description) > 50:
+            base_score = min(base_score * 1.05, 1.0)
+        
+        return base_score
+
+    async def orchestrate_with_guardian_oversight(
+        self,
+        db: Any,  # AsyncSession
+        execution_id: UUID,
+    ) -> Dict[str, Any]:
+        """
+        Orchestrate workflow while monitoring as Guardian.
+        
+        Combines orchestration + monitoring in one intelligent agent.
+        
+        Args:
+            db: Database session
+            execution_id: Task execution ID
+            
+        Returns:
+            OrchestrationReport with orchestration actions and guardian insights
+        """
+        if not self.agent_id:
+            raise ValueError("PM agent_id must be configured")
+        
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        # Monitor workflow health first
+        health = await self.monitor_workflow_health(
+            db=db,
+            execution_id=execution_id,
+        )
+        
+        # Check coherence for all active agents
+        from backend.models.message import AgentMessage
+        from sqlalchemy import select, distinct
+        
+        # Get active agents from messages
+        stmt = (
+            select(distinct(AgentMessage.sender_id))
+            .where(AgentMessage.task_execution_id == execution_id)
+        )
+        result = await db.execute(stmt)
+        active_agent_ids = [row[0] for row in result.all()]
+        
+        coherence_results = {}
+        for agent_id in active_agent_ids:
+            # Determine phase from tasks (simplified - would need actual phase determination)
+            # For now, check all phases
+            for phase in [WorkflowPhase.INVESTIGATION, WorkflowPhase.BUILDING, WorkflowPhase.VALIDATION]:
+                try:
+                    coherence = await self.check_phase_coherence(
+                        db=db,
+                        execution_id=execution_id,
+                        agent_id=agent_id,
+                        phase=phase,
+                    )
+                    coherence_results[str(agent_id)] = coherence.to_dict()
+                    break  # Just check one phase for now
+                except Exception as e:
+                    logger.warning(f"Error checking coherence for agent {agent_id}: {e}")
+        
+        return {
+            "orchestration_status": "monitoring",
+            "workflow_health": health.to_dict(),
+            "coherence_results": coherence_results,
+            "guardian_actions": self._determine_guardian_actions(health),
+        }
+    
+    def _determine_guardian_actions(self, health: WorkflowHealth) -> List[str]:
+        """Determine actions to take based on health metrics"""
+        actions = []
+        
+        for anomaly in health.anomalies:
+            if anomaly.severity == "high":
+                actions.append(f"🚨 {anomaly.suggested_action}")
+            elif anomaly.severity == "medium":
+                actions.append(f"⚠️ {anomaly.suggested_action}")
+        
+        return actions
+    
+    # ============================================================================
+    # Advanced Guardian Capabilities (Stream G)
+    # ============================================================================
+    
+    async def detect_workflow_anomalies(
+        self,
+        db: Any,  # AsyncSession
+        execution_id: UUID,
+    ) -> List[Anomaly]:
+        """
+        Detect workflow anomalies using advanced detection.
+        
+        This is an advanced Guardian capability (Stream G) that detects:
+        - Phase drift
+        - Low-value task spawning
+        - Workflow stagnation
+        - Resource imbalance
+        - Communication gaps
+        
+        Args:
+            db: Database session
+            execution_id: Task execution ID
+            
+        Returns:
+            List of detected anomalies
+        """
+        detector = get_anomaly_detector()
+        anomalies = await detector.detect_anomalies(db, execution_id)
+        
+        return anomalies
+    
+    async def generate_guardian_recommendations(
+        self,
+        db: Any,  # AsyncSession
+        execution_id: UUID,
+    ) -> List[Recommendation]:
+        """
+        Generate actionable recommendations based on coherence and anomalies.
+        
+        This is an advanced Guardian capability (Stream G).
+        
+        Args:
+            db: Database session
+            execution_id: Task execution ID
+            
+        Returns:
+            List of recommendations
+        """
+        # Get coherence scores for all agents
+        scorer = get_coherence_scorer()
+        
+        # Get all agents in execution's squad
+        from backend.models.project import TaskExecution
+        execution = await db.get(TaskExecution, execution_id)
+        
+        coherence_scores = []
+        if execution and hasattr(execution, 'squad') and execution.squad:
+            for member in execution.squad.members:
+                if member.is_active:
+                    try:
+                        score = await scorer.calculate_coherence(
+                            db=db,
+                            agent_id=member.id,
+                            execution_id=execution_id,
+                            phase=WorkflowPhase.BUILDING,  # Default
+                        )
+                        coherence_scores.append(score)
+                    except Exception as e:
+                        logger.debug(f"Could not calculate coherence for agent {member.id}: {e}")
+        
+        # Generate recommendations
+        recommendations_engine = get_recommendations_engine()
+        recommendations = await recommendations_engine.generate_recommendations(
+            db=db,
+            execution_id=execution_id,
+            coherence_scores=coherence_scores,
+        )
+        
+        return recommendations
+    
+    async def calculate_detailed_coherence(
+        self,
+        db: Any,  # AsyncSession
+        execution_id: UUID,
+        agent_id: UUID,
+    ) -> Dict[str, Any]:
+        """
+        Calculate detailed coherence metrics with breakdown.
+        
+        This is an advanced Guardian capability (Stream G).
+        
+        Args:
+            db: Database session
+            execution_id: Task execution ID
+            agent_id: Agent ID to analyze
+            
+        Returns:
+            Detailed coherence metrics with breakdown
+        """
+        scorer = get_coherence_scorer()
+        
+        # Calculate for current phase (can be enhanced)
+        score = await scorer.calculate_coherence(
+            db=db,
+            agent_id=agent_id,
+            execution_id=execution_id,
+            phase=WorkflowPhase.BUILDING,
+        )
+        
+        return {
+            "overall_score": score.overall_score,
+            "detailed_metrics": score.metrics,
+            "phase": score.phase.value,
+            "agent_id": str(score.agent_id),
+            "calculated_at": score.calculated_at.isoformat(),
+            "details": score.details,
+        }

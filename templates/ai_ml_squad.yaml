@@ -1,0 +1,431 @@
+name: "AI/ML Development Squad"
+slug: "ai-ml-squad"
+description: "Complete AI/ML team with specialized PM, data scientists, data engineers, and ML engineers. Ideal for building ML models, data pipelines, and production ML systems end-to-end."
+category: "ai-ml"
+is_featured: true
+
+# Agent definitions
+agents:
+  - role: "ai_ml_project_manager"
+    specialization: "default"
+    llm_provider: "anthropic"
+    llm_model: "claude-3-5-sonnet-20241022"
+    description: "Manages AI/ML projects, coordinates data science team, handles ML-specific workflows and challenges"
+
+  - role: "data_scientist"
+    specialization: "default"
+    llm_provider: "openai"
+    llm_model: "gpt-4"
+    description: "Performs statistical analysis, builds predictive models, explores data, generates insights"
+
+  - role: "data_engineer"
+    specialization: "default"
+    llm_provider: "openai"
+    llm_model: "gpt-4"
+    description: "Builds data pipelines, ensures data quality, manages data infrastructure, supports data access"
+
+  - role: "ml_engineer"
+    specialization: "default"
+    llm_provider: "openai"
+    llm_model: "gpt-4"
+    description: "Deploys ML models to production, builds ML infrastructure, implements MLOps practices"
+
+# Routing rules - defines the escalation hierarchy for AI/ML team
+routing_rules:
+  # Data Scientist routes
+  - asker_role: "data_scientist"
+    question_type: "data_request"
+    escalation_level: 0
+    responder_role: "data_engineer"
+    priority: 10
+    description: "Data scientist requests data from data engineer"
+
+  - asker_role: "data_scientist"
+    question_type: "data_quality"
+    escalation_level: 0
+    responder_role: "data_engineer"
+    priority: 10
+    description: "Data quality questions go to data engineer"
+
+  - asker_role: "data_scientist"
+    question_type: "model_deployment"
+    escalation_level: 0
+    responder_role: "ml_engineer"
+    priority: 10
+    description: "Model deployment questions to ML engineer"
+
+  - asker_role: "data_scientist"
+    question_type: "project_management"
+    escalation_level: 0
+    responder_role: "ai_ml_project_manager"
+    priority: 10
+    description: "Project management questions to AI/ML PM"
+
+  # Data Engineer routes
+  - asker_role: "data_engineer"
+    question_type: "data_requirements"
+    escalation_level: 0
+    responder_role: "data_scientist"
+    priority: 10
+    description: "Data engineer asks data scientist about data requirements"
+
+  - asker_role: "data_engineer"
+    question_type: "feature_store"
+    escalation_level: 0
+    responder_role: "ml_engineer"
+    priority: 10
+    description: "Feature store questions to ML engineer"
+
+  - asker_role: "data_engineer"
+    question_type: "project_management"
+    escalation_level: 0
+    responder_role: "ai_ml_project_manager"
+    priority: 10
+    description: "Project management questions to AI/ML PM"
+
+  - asker_role: "data_engineer"
+    question_type: "data_quality_issue"
+    escalation_level: 0
+    responder_role: "ai_ml_project_manager"
+    priority: 10
+    description: "Data quality issues escalated to PM"
+
+  # ML Engineer routes
+  - asker_role: "ml_engineer"
+    question_type: "model_requirements"
+    escalation_level: 0
+    responder_role: "data_scientist"
+    priority: 10
+    description: "ML engineer asks data scientist about model requirements"
+
+  - asker_role: "ml_engineer"
+    question_type: "feature_requirements"
+    escalation_level: 0
+    responder_role: "data_engineer"
+    priority: 10
+    description: "Feature requirements questions to data engineer"
+
+  - asker_role: "ml_engineer"
+    question_type: "model_performance"
+    escalation_level: 0
+    responder_role: "data_scientist"
+    priority: 10
+    description: "Model performance questions to data scientist"
+
+  - asker_role: "ml_engineer"
+    question_type: "project_management"
+    escalation_level: 0
+    responder_role: "ai_ml_project_manager"
+    priority: 10
+    description: "Project management questions to AI/ML PM"
+
+  - asker_role: "ml_engineer"
+    question_type: "production_issue"
+    escalation_level: 0
+    responder_role: "ai_ml_project_manager"
+    priority: 10
+    description: "Production issues escalated to PM"
+
+  # AI/ML Project Manager routes
+  - asker_role: "ai_ml_project_manager"
+    question_type: "technical_ml"
+    escalation_level: 0
+    responder_role: "data_scientist"
+    priority: 10
+    description: "PM asks data scientist for ML technical expertise"
+
+  - asker_role: "ai_ml_project_manager"
+    question_type: "data_infrastructure"
+    escalation_level: 0
+    responder_role: "data_engineer"
+    priority: 10
+    description: "PM asks data engineer about infrastructure"
+
+  - asker_role: "ai_ml_project_manager"
+    question_type: "deployment_status"
+    escalation_level: 0
+    responder_role: "ml_engineer"
+    priority: 10
+    description: "PM asks ML engineer about deployment status"
+
+# Success metrics to track
+success_metrics:
+  - name: "Model Development Cycle Time"
+    target: 14
+    unit: "days"
+    description: "Average time from model idea to production deployment"
+
+  - name: "Data Pipeline Reliability"
+    target: 99.5
+    unit: "percentage"
+    description: "Percentage of time data pipelines are running successfully"
+
+  - name: "Model Performance Drift Detection"
+    target: 24
+    unit: "hours"
+    description: "Time to detect model performance degradation"
+
+  - name: "Experiment Success Rate"
+    target: 30
+    unit: "percentage"
+    description: "Percentage of experiments that lead to production models"
+
+  - name: "Data Quality Score"
+    target: 95
+    unit: "percentage"
+    description: "Overall data quality score across all pipelines"
+
+# Example conversations demonstrating the template
+example_conversations:
+  - title: "Data Request Workflow"
+    description: "Data scientist requests training data from data engineer"
+    participants: ["data_scientist", "data_engineer"]
+    messages:
+      - from: "data_scientist"
+        to: "data_engineer"
+        content: |
+          I need training data for the churn prediction model.
+
+          **Requirements:**
+          - User behavior data from last 12 months
+          - Features: user_id, timestamp, action_type, value, session_id
+          - Filters: active users only (last login < 30 days ago)
+          - Format: Parquet
+          - Location: S3 bucket for model training
+
+          **Timeline:** Need by end of week for model development
+        type: "question"
+        question_type: "data_request"
+
+      - from: "data_engineer"
+        to: "data_scientist"
+        content: |
+          **Data Pipeline Setup:**
+
+          I'll create a pipeline to extract and prepare the training dataset.
+
+          **Pipeline Steps:**
+          1. Extract from user_behavior_logs table (last 12 months)
+          2. Join with user_profiles for active user filter
+          3. Apply filters (last_login < 30 days)
+          4. Transform to required schema
+          5. Write to S3: `s3://ml-training-data/churn-prediction/v1/`
+
+          **Data Quality Checks:**
+          - Completeness: > 95% non-null values
+          - Freshness: Data updated daily
+          - Schema validation: All required columns present
+
+          **Timeline:** Will have data ready by Thursday EOD. Will send S3 location once ready.
+
+          **Questions:**
+          - Do you need incremental updates or one-time snapshot?
+          - Any specific sampling needed (e.g., balanced classes)?
+        type: "answer"
+
+  - title: "Model Deployment Coordination"
+    description: "Data scientist coordinates model deployment with ML engineer"
+    participants: ["data_scientist", "ml_engineer"]
+    messages:
+      - from: "data_scientist"
+        to: "ml_engineer"
+        content: |
+          The churn prediction model is ready for deployment.
+
+          **Model Details:**
+          - Model Type: XGBoost Classifier
+          - Performance: Accuracy 0.89, Precision 0.87, Recall 0.85
+          - Format: Pickle file (can convert to ONNX if needed)
+          - Size: 45 MB
+          - Input: 25 features (list attached)
+          - Output: Probability score (0-1)
+
+          **Requirements:**
+          - Latency: < 100ms p95
+          - Throughput: 1000 requests/second
+          - Availability: 99.9%
+
+          **Location:** `s3://ml-models/churn-prediction/v2/model.pkl`
+
+          Ready for deployment when you are!
+        type: "question"
+        question_type: "model_deployment"
+
+      - from: "ml_engineer"
+        to: "data_scientist"
+        content: |
+          **Deployment Plan:**
+
+          **Infrastructure:**
+          - Serving: TensorFlow Serving (supports XGBoost via ONNX)
+          - Compute: 2x GPU instances (for low latency)
+          - Load Balancer: AWS ALB
+          - Monitoring: Evidently AI for drift detection
+
+          **Optimization:**
+          - Convert to ONNX for faster inference (target: 50ms p95)
+          - Implement request batching (10 requests/batch)
+          - Add Redis caching for frequent predictions
+
+          **Deployment Strategy:**
+          - Blue-green deployment
+          - Canary: 10% traffic first 24 hours
+          - Full rollout if metrics stable
+
+          **Timeline:**
+          - Day 1: Convert model, set up infrastructure
+          - Day 2: Deploy to staging, load testing
+          - Day 3: Canary deployment to production
+          - Day 4: Full rollout if successful
+
+          **Questions:**
+          - Do you have a baseline model to compare against?
+          - What's the acceptable accuracy drop threshold for rollback?
+        type: "answer"
+
+  - title: "Data Quality Issue Escalation"
+    description: "Data engineer escalates data quality issue to PM"
+    participants: ["data_engineer", "ai_ml_project_manager"]
+    messages:
+      - from: "data_engineer"
+        to: "ai_ml_project_manager"
+        content: |
+          **Data Quality Alert - High Severity**
+
+          **Issue:** Training data pipeline failure detected
+
+          **Details:**
+          - Pipeline: user_behavior_logs ETL
+          - Failure: Missing 30% of expected records for last 3 days
+          - Impact: Churn prediction model training blocked
+          - Root Cause: Source system API rate limiting
+
+          **Immediate Actions Taken:**
+          - Notified data source team
+          - Implemented retry logic with backoff
+          - Started backfill process
+
+          **Timeline Impact:**
+          - Model training delayed by 2-3 days
+          - Need to backfill missing data before training
+
+          **Recommendation:**
+          - Escalate to source system team for API limit increase
+          - Consider alternative data source if available
+          - Adjust project timeline accordingly
+
+          **Next Steps:**
+          - Waiting for source team response (ETA: 4 hours)
+          - Backfill will take 6-8 hours once resolved
+          - Will update data scientist once data ready
+        type: "question"
+        question_type: "data_quality_issue"
+
+      - from: "ai_ml_project_manager"
+        to: "data_engineer"
+        content: |
+          **Action Plan:**
+
+          **Immediate:**
+          1. I'll escalate to source system team lead
+          2. Request API limit increase or alternative access
+          3. Coordinate with data scientist on timeline adjustment
+
+          **Mitigation:**
+          - Continue backfill process in parallel
+          - Explore alternative data sources
+          - Consider using historical data if recent data unavailable
+
+          **Communication:**
+          - Update stakeholders on 2-3 day delay
+          - Set up daily sync until resolved
+          - Document lesson learned for future
+
+          **Timeline:**
+          - Today: Resolve API access issue
+          - Tomorrow: Complete backfill
+          - Day 3: Resume model training
+
+          Keep me updated on progress. I'll handle stakeholder communication.
+        type: "answer"
+
+  - title: "Feature Store Discussion"
+    description: "ML engineer and data engineer coordinate on feature store"
+    participants: ["ml_engineer", "data_engineer"]
+    messages:
+      - from: "ml_engineer"
+        to: "data_engineer"
+        content: |
+          Setting up feature store for real-time model serving.
+
+          **Requirements:**
+          - Features: user_age, purchase_history_30d, last_login_days, avg_session_duration
+          - Latency: < 50ms for feature retrieval
+          - Update Frequency: Real-time for last_login, hourly for aggregations
+          - Storage: Online store (Redis) + Offline store (S3)
+
+          **Questions:**
+          1. Can you provide these features from existing pipelines?
+          2. What's the best way to sync online/offline stores?
+          3. How do we handle feature versioning?
+
+          **Timeline:** Need feature store ready in 2 weeks for model deployment.
+        type: "question"
+        question_type: "feature_store"
+
+      - from: "data_engineer"
+        to: "ml_engineer"
+        content: |
+          **Feature Store Implementation Plan:**
+
+          **Feature Availability:**
+          - ✅ user_age: Available from user_profiles
+          - ✅ purchase_history_30d: Can aggregate from transactions
+          - ✅ last_login_days: Available from auth_logs
+          - ⚠️ avg_session_duration: Need to calculate from session_logs
+
+          **Architecture:**
+          - **Online Store:** Redis with TTL-based expiration
+          - **Offline Store:** S3 Parquet files (partitioned by date)
+          - **Sync:** Airflow DAG runs hourly, updates Redis
+          - **Real-time Updates:** Kafka stream for last_login updates
+
+          **Feature Pipeline:**
+          1. Extract from source systems
+          2. Transform/aggregate features
+          3. Write to S3 (offline store)
+          4. Sync to Redis (online store)
+          5. Real-time updates via Kafka
+
+          **Versioning:**
+          - Feature versions in S3 path: `features/v1/`, `features/v2/`
+          - Redis keys include version: `feature:user:{user_id}:v1:age`
+
+          **Timeline:**
+          - Week 1: Build feature pipelines
+          - Week 2: Set up online/offline stores, testing
+          - Ready for integration by end of week 2
+
+          **Next Steps:**
+          - I'll create feature definitions document
+          - We can review schema together
+          - Set up monitoring for feature freshness
+        type: "answer"
+
+# Use cases for this template
+use_cases:
+  - "ML model development teams"
+  - "Data science projects requiring production deployment"
+  - "Teams building ML infrastructure"
+  - "Organizations implementing MLOps"
+  - "Data pipeline and feature store development"
+
+# Tags for discovery
+tags:
+  - "ai-ml"
+  - "data-science"
+  - "machine-learning"
+  - "mlops"
+  - "data-engineering"
+  - "model-deployment"
+

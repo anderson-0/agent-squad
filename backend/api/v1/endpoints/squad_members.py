@@ -15,6 +15,7 @@ from backend.models.user import User
 from backend.models.squad import SquadMember
 from backend.services.agent_service import AgentService
 from backend.services.squad_service import SquadService
+from backend.services.cached_services.squad_cache import get_squad_cache
 from backend.schemas.squad_member import (
     SquadMemberCreate,
     SquadMemberUpdate,
@@ -81,6 +82,10 @@ async def create_squad_member(
         config=member_data.config or {},
     )
 
+    # Invalidate squad members cache
+    squad_cache = get_squad_cache()
+    await squad_cache.invalidate_squad_member(member_data.squad_id)
+
     return member
 
 
@@ -117,8 +122,9 @@ async def list_squad_members(
     # Then verify squad ownership
     await SquadService.verify_squad_ownership(db, squad_id, current_user.id)
 
-    # Get squad members
-    members = await AgentService.get_squad_members(
+    # Get squad members with caching
+    squad_cache = get_squad_cache()
+    members = await squad_cache.get_squad_members(
         db=db,
         squad_id=squad_id,
         active_only=active_only,
@@ -126,7 +132,7 @@ async def list_squad_members(
 
     # Filter by role if specified
     if role:
-        members = [m for m in members if m.role == role]
+        members = [m for m in members if m.get("role") == role]
 
     return members
 
@@ -321,6 +327,10 @@ async def update_squad_member(
             detail=f"Squad member {member_id} not found"
         )
 
+    # Invalidate squad members cache
+    squad_cache = get_squad_cache()
+    await squad_cache.invalidate_squad_member(member.squad_id)
+
     return updated_member
 
 
@@ -361,6 +371,10 @@ async def deactivate_squad_member(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Squad member {member_id} not found"
         )
+
+    # Invalidate squad members cache
+    squad_cache = get_squad_cache()
+    await squad_cache.invalidate_squad_member(member.squad_id)
 
     return updated_member
 
@@ -403,6 +417,10 @@ async def reactivate_squad_member(
             detail=f"Squad member {member_id} not found"
         )
 
+    # Invalidate squad members cache
+    squad_cache = get_squad_cache()
+    await squad_cache.invalidate_squad_member(member.squad_id)
+
     return updated_member
 
 
@@ -434,6 +452,10 @@ async def delete_squad_member(
 
     # Verify squad ownership
     await SquadService.verify_squad_ownership(db, member.squad_id, current_user.id)
+
+    # Invalidate squad members cache before deletion
+    squad_cache = get_squad_cache()
+    await squad_cache.invalidate_squad_member(member.squad_id)
 
     # Delete
     success = await AgentService.delete_squad_member(db, member_id)
