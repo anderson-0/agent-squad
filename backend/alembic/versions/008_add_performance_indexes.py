@@ -10,8 +10,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '008_add_performance_indexes'
-down_revision = '007_add_workflow_branching'  # Update to your latest revision
+revision = '008'
+down_revision = '007'
 branch_labels = None
 depends_on = None
 

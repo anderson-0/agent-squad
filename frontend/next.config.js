@@ -1,3 +1,7 @@
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+})
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -15,6 +19,10 @@ const nextConfig = {
         protocol: 'http',
         hostname: 'localhost',
       },
+      {
+        protocol: 'https',
+        hostname: '**', // Allow all HTTPS hosts for flexibility
+      },
     ],
     formats: ['image/avif', 'image/webp'],
   },
@@ -27,4 +35,4 @@ const nextConfig = {
   // Server actions are now stable in Next.js 16 (no experimental flag needed)
 };
 
-module.exports = nextConfig;
+module.exports = withBundleAnalyzer(nextConfig);

@@ -12,8 +12,8 @@ from backend.core.config import settings
 from backend.core.logging import setup_logging
 from backend.core.database import init_db, close_db
 from backend.core.agno_config import initialize_agno, shutdown_agno
+from backend.core.redis import get_redis, close_redis
 from backend.api.v1.router import api_router
-from backend.services.cache_service import get_cache, close_cache
 
 # Production middleware
 from backend.middleware import (
@@ -31,13 +31,13 @@ async def lifespan(app: FastAPI):
     setup_logging()
     initialize_agno()  # Initialize Agno framework
     await init_db()
-    await get_cache()  # Initialize cache service
+    await get_redis()  # Initialize Redis cache
     print(f"🚀 {settings.APP_NAME} started in {settings.ENV} mode")
 
     yield
 
     # Shutdown
-    await close_cache()  # Close cache connections
+    await close_redis()  # Close Redis connection
     await close_db()
     shutdown_agno()  # Shutdown Agno framework
     print("👋 Application shutdown complete")
@@ -86,6 +86,28 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 if settings.ENABLE_METRICS:
     metrics_app = make_asgi_app()
     app.mount("/metrics", metrics_app)
+
+# Inngest Background Jobs
+# Mount Inngest endpoint for background workflow execution
+# This enables async agent execution with instant API responses
+try:
+    from inngest.fastapi import serve as inngest_serve
+    from backend.core.inngest import inngest
+    from backend.workflows.agent_workflows import (
+        execute_agent_workflow,
+        execute_single_agent_workflow
+    )
+
+    app.mount(
+        "/api/inngest",
+        inngest_serve(
+            inngest,
+            [execute_agent_workflow, execute_single_agent_workflow],
+        ),
+    )
+    print("✅ Inngest workflows registered: /api/inngest")
+except ImportError:
+    print("⚠️  Inngest not available - install with: pip install inngest")
 
 
 # Basic health check (redirect to detailed endpoint)

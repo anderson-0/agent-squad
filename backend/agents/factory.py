@@ -20,6 +20,10 @@ from backend.agents.specialized.agno_solution_architect import AgnoSolutionArchi
 from backend.agents.specialized.agno_devops_engineer import AgnoDevOpsEngineerAgent
 from backend.agents.specialized.agno_ai_engineer import AgnoAIEngineerAgent
 from backend.agents.specialized.agno_designer import AgnoDesignerAgent
+from backend.agents.specialized.agno_data_scientist import AgnoDataScientistAgent
+from backend.agents.specialized.agno_data_engineer import AgnoDataEngineerAgent
+from backend.agents.specialized.agno_ml_engineer import AgnoMLEngineerAgent
+from backend.agents.specialized.agno_ai_ml_project_manager import AgnoAIMLProjectManagerAgent
 
 
 # Registry of agent classes by role
@@ -33,6 +37,11 @@ AGENT_REGISTRY: Dict[str, Type[AgnoSquadAgent]] = {
     "devops_engineer": AgnoDevOpsEngineerAgent,
     "ai_engineer": AgnoAIEngineerAgent,
     "designer": AgnoDesignerAgent,
+    # New specialized AI/ML roles
+    "data_scientist": AgnoDataScientistAgent,
+    "data_engineer": AgnoDataEngineerAgent,
+    "ml_engineer": AgnoMLEngineerAgent,
+    "ai_ml_project_manager": AgnoAIMLProjectManagerAgent,
 }
 
 

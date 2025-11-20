@@ -18,6 +18,20 @@ from backend.models.multi_turn_conversation import (
     ConversationMessage,
     ConversationParticipant
 )
+from backend.models.workflow import (
+    WorkflowPhase,
+    DynamicTask,
+    task_dependencies,
+)
+from backend.models.branching import WorkflowBranch
+from backend.models.guardian import CoherenceMetrics
+from backend.models.llm_cost_tracking import (
+    LLMCostEntry,
+    LLMCostSummary,
+    LLMProvider as LLMProviderEnum,
+    calculate_cost,
+    get_model_pricing,
+)
 
 __all__ = [
     "Base",
@@ -46,4 +60,14 @@ __all__ = [
     "MultiTurnConversation",
     "ConversationMessage",
     "ConversationParticipant",
+    "WorkflowPhase",
+    "DynamicTask",
+    "task_dependencies",
+    "WorkflowBranch",
+    "CoherenceMetrics",
+    "LLMCostEntry",
+    "LLMCostSummary",
+    "LLMProviderEnum",
+    "calculate_cost",
+    "get_model_pricing",
 ]
