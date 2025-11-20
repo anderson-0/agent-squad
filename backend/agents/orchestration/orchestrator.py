@@ -14,7 +14,6 @@ from backend.agents.orchestration.workflow_engine import WorkflowEngine, Workflo
 from backend.agents.orchestration.delegation_engine import DelegationEngine
 from backend.agents.communication.message_bus import MessageBus
 from backend.agents.context.context_manager import ContextManager
-from backend.services.agent_service import AgentService
 from backend.services.task_execution_service import TaskExecutionService
 from backend.models.project import Task
 

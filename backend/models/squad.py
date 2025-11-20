@@ -29,6 +29,7 @@ class Squad(Base, TimestampMixin):
     projects = relationship("Project", back_populates="squad", cascade="all, delete-orphan")
     task_executions = relationship("TaskExecution", back_populates="squad", cascade="all, delete-orphan")
     learning_insights = relationship("LearningInsight", back_populates="squad", cascade="all, delete-orphan")
+    llm_cost_entries = relationship("LLMCostEntry", back_populates="squad", cascade="all, delete-orphan")
 
     __table_args__ = (
         Index("ix_squads_user_id", "user_id"),

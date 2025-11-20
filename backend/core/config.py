@@ -25,6 +25,21 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
 
+    # Cache Configuration
+    CACHE_ENABLED: bool = True
+    CACHE_DEFAULT_TTL: int = 300  # 5 minutes
+    CACHE_PREFIX: str = "agent_squad"
+    # Cache TTLs (seconds) - Data-driven: adjust based on cache_metrics
+    CACHE_USER_TTL: int = 300  # 5 minutes
+    CACHE_ORG_TTL: int = 600  # 10 minutes
+    CACHE_SQUAD_TTL: int = 300  # 5 minutes
+    CACHE_TASK_TTL: int = 30  # 30 seconds (agents may complete tasks quickly)
+    CACHE_EXECUTION_STATUS_TTL: int = 10  # 10 seconds
+
+    # Cache Metrics Configuration
+    CACHE_METRICS_ENABLED: bool = True  # Track cache performance metrics
+    CACHE_METRICS_WINDOW: int = 3600  # Track metrics for last 1 hour
+
     # Security
     SECRET_KEY: str = Field(..., env="SECRET_KEY")
     ALGORITHM: str = "HS256"
@@ -52,6 +67,10 @@ class Settings(BaseSettings):
     # Groq (optional)
     GROQ_API_KEY: str = Field(default="", env="GROQ_API_KEY")
 
+    # Ollama (local LLM - recommended for development)
+    OLLAMA_BASE_URL: str = Field(default="http://localhost:11434", env="OLLAMA_BASE_URL")
+    OLLAMA_MODEL: str = Field(default="llama3.2", env="OLLAMA_MODEL")
+
     # GitHub Integration (for MCP tools)
     GITHUB_TOKEN: str = Field(default="", env="GITHUB_TOKEN")
 
@@ -59,6 +78,9 @@ class Settings(BaseSettings):
     JIRA_URL: str = Field(default="", env="JIRA_URL")
     JIRA_USERNAME: str = Field(default="", env="JIRA_USERNAME")
     JIRA_API_TOKEN: str = Field(default="", env="JIRA_API_TOKEN")
+
+    # E2B Sandbox (for secure code execution)
+    E2B_API_KEY: str = Field(default="", env="E2B_API_KEY")
 
     # Pinecone (optional for development)
     PINECONE_API_KEY: str = Field(default="", env="PINECONE_API_KEY")

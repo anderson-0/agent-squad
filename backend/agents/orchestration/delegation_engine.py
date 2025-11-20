@@ -4,13 +4,15 @@ Delegation Engine
 Analyzes tasks and intelligently delegates work to the most appropriate agents.
 Handles load balancing, skill matching, and task breakdown.
 """
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.models.squad import SquadMember
-from backend.services.agent_service import AgentService
+
+if TYPE_CHECKING:
+    from backend.services.agent_service import AgentService
 
 
 class DelegationEngine:
@@ -105,7 +107,8 @@ class DelegationEngine:
         Returns:
             Best matching squad member or None
         """
-        # Get all active squad members
+        # Get all active squad members (lazy import to avoid circular dependency)
+        from backend.services.agent_service import AgentService
         members = await AgentService.get_squad_members(db, squad_id, active_only=True)
 
         if not members:
@@ -153,6 +156,8 @@ class DelegationEngine:
         Returns:
             Delegation details
         """
+        # Lazy import to avoid circular dependency
+        from backend.services.agent_service import AgentService
         agent = await AgentService.get_squad_member(db, agent_id)
 
         if not agent:

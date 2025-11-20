@@ -30,6 +30,11 @@ from backend.models import (
     Webhook,
     Subscription,
     UsageMetrics,
+    WorkflowPhase,
+    DynamicTask,
+    task_dependencies,
+    WorkflowBranch,
+    CoherenceMetrics,
 )
 
 # this is the Alembic Config object, which provides

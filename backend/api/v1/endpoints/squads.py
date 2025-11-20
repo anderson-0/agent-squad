@@ -14,6 +14,7 @@ from backend.core.auth import get_current_user
 from backend.models.user import User
 from backend.models.squad import Squad
 from backend.services.squad_service import SquadService
+from backend.services.cached_services.squad_cache import get_squad_cache
 from backend.schemas.squad import (
     SquadCreate,
     SquadUpdate,
@@ -84,11 +85,25 @@ async def list_squads(
 
     Supports pagination with skip and limit.
     """
-    squads = await SquadService.get_user_squads(
-        db=db,
-        user_id=current_user.id,
-        status=status_filter,
-    )
+    # Use caching for organization filter
+    squad_cache = get_squad_cache()
+
+    if organization_id:
+        # Cache by organization
+        squads = await squad_cache.get_squads_by_organization(
+            db=db,
+            org_id=organization_id,
+            active_only=(status_filter == "active")
+        )
+        # Filter by user ownership (in case org has multiple users)
+        squads = [s for s in squads if s.get("user_id") == str(current_user.id)]
+    else:
+        # Fall back to service for user-level queries (no cache yet)
+        squads = await SquadService.get_user_squads(
+            db=db,
+            user_id=current_user.id,
+            status=status_filter,
+        )
 
     # Apply pagination
     return squads[skip: skip + limit]
@@ -112,8 +127,10 @@ async def get_squad(
 
     Returns squad details if user has access.
     """
-    # Get squad
-    squad = await SquadService.get_squad(db, squad_id)
+    # Get squad with caching
+    squad_cache = get_squad_cache()
+    squad = await squad_cache.get_squad_by_id(db, squad_id)
+
     if not squad:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -144,8 +161,10 @@ async def get_squad_details(
 
     Returns squad with full agent details.
     """
-    # Check if squad exists first
-    squad = await SquadService.get_squad(db, squad_id)
+    squad_cache = get_squad_cache()
+
+    # Check if squad exists first (use cache)
+    squad = await squad_cache.get_squad_by_id(db, squad_id)
     if not squad:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -155,8 +174,14 @@ async def get_squad_details(
     # Then verify ownership
     await SquadService.verify_squad_ownership(db, squad_id, current_user.id)
 
-    # Get squad with agents
-    squad_details = await SquadService.get_squad_with_agents(db, squad_id)
+    # Get members (use cache)
+    members = await squad_cache.get_squad_members(db, squad_id, active_only=False)
+
+    # Combine into squad_details
+    squad_details = {
+        **squad,
+        "members": members
+    }
 
     return squad_details
 
@@ -240,6 +265,10 @@ async def update_squad(
         config=squad_update.config,
     )
 
+    # Invalidate cache
+    squad_cache = get_squad_cache()
+    await squad_cache.invalidate_squad(squad_id, squad.get("org_id"))
+
     return updated_squad
 
 
@@ -281,6 +310,10 @@ async def update_squad_status(
         status=new_status,
     )
 
+    # Invalidate cache
+    squad_cache = get_squad_cache()
+    await squad_cache.invalidate_squad(squad_id, squad.get("org_id"))
+
     return updated_squad
 
 
@@ -317,6 +350,10 @@ async def delete_squad(
 
     # Then verify ownership
     await SquadService.verify_squad_ownership(db, squad_id, current_user.id)
+
+    # Invalidate cache before deletion
+    squad_cache = get_squad_cache()
+    await squad_cache.invalidate_squad(squad_id, squad.get("org_id"))
 
     # Delete squad
     await SquadService.delete_squad(db, squad_id)

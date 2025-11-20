@@ -15,6 +15,7 @@ from backend.models.user import User
 from backend.models.task_execution import TaskExecution
 from backend.services.task_execution_service import TaskExecutionService
 from backend.services.squad_service import SquadService
+from backend.services.cached_services.task_cache import get_task_cache
 from backend.schemas.task_execution import (
     TaskExecutionCreate,
     TaskExecutionResponse,
@@ -88,11 +89,13 @@ async def list_task_executions(
     # Verify squad ownership
     await SquadService.verify_squad_ownership(db, squad_id, current_user.id)
 
-    # Get executions
-    executions = await TaskExecutionService.get_squad_executions(
+    # Get executions with caching
+    task_cache = get_task_cache()
+    executions = await task_cache.get_executions_by_squad(
         db=db,
         squad_id=squad_id,
         status=status_filter,
+        limit=limit + skip  # Get enough for pagination
     )
 
     # Apply pagination
@@ -117,8 +120,10 @@ async def get_task_execution(
 
     Returns execution details if user has access.
     """
-    # Get execution
-    execution = await TaskExecutionService.get_task_execution(db, execution_id)
+    # Get execution with caching
+    task_cache = get_task_cache()
+    execution = await task_cache.get_execution_by_id(db, execution_id)
+
     if not execution:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -126,7 +131,7 @@ async def get_task_execution(
         )
 
     # Verify squad ownership
-    await SquadService.verify_squad_ownership(db, execution.squad_id, current_user.id)
+    await SquadService.verify_squad_ownership(db, execution.get("squad_id"), current_user.id)
 
     return execution
 
@@ -304,6 +309,14 @@ async def update_execution_status(
         status=new_status,
     )
 
+    # Invalidate cache (especially the HOT PATH execution status cache)
+    task_cache = get_task_cache()
+    await task_cache.invalidate_execution(
+        execution_id,
+        task_id=execution.task_id,
+        squad_id=execution.squad_id
+    )
+
     return updated_execution
 
 
@@ -343,6 +356,14 @@ async def complete_execution(
         db=db,
         execution_id=execution_id,
         result=result,
+    )
+
+    # Invalidate cache
+    task_cache = get_task_cache()
+    await task_cache.invalidate_execution(
+        execution_id,
+        task_id=execution.task_id,
+        squad_id=execution.squad_id
     )
 
     return completed_execution
@@ -387,6 +408,14 @@ async def report_execution_error(
         execution_id=execution_id,
         error_message=error_message,
         error_details=error_details or {},
+    )
+
+    # Invalidate cache
+    task_cache = get_task_cache()
+    await task_cache.invalidate_execution(
+        execution_id,
+        task_id=execution.task_id,
+        squad_id=execution.squad_id
     )
 
     return failed_execution
@@ -492,6 +521,14 @@ async def cancel_execution(
             detail="Execution cannot be cancelled (already completed or failed)"
         )
 
+    # Invalidate cache
+    task_cache = get_task_cache()
+    await task_cache.invalidate_execution(
+        execution_id,
+        task_id=execution.task_id,
+        squad_id=execution.squad_id
+    )
+
     return cancelled_execution
 
 
@@ -540,3 +577,102 @@ async def add_log_entry(
     )
 
     return updated_execution
+
+
+@router.post(
+    "/{execution_id}/start-async",
+    response_model=Dict[str, Any],
+    summary="Start execution asynchronously (Inngest)",
+    description="Start task execution in background via Inngest - instant response"
+)
+async def start_execution_async(
+    execution_id: UUID,
+    message: str = Query(..., description="User message/request"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+) -> Dict[str, Any]:
+    """
+    Start task execution asynchronously via Inngest.
+
+    **Key Benefits:**
+    - Returns instantly (< 100ms) - no waiting for LLM
+    - Workflow runs in background worker
+    - Automatic retries on failure
+    - Durable execution (survives crashes)
+
+    **Before (Synchronous):**
+    - API blocks for 5-30 seconds
+    - User waits for entire workflow
+    - Timeout errors possible
+
+    **After (Inngest):**
+    - API responds in < 100ms
+    - User gets instant feedback
+    - Workflow runs reliably in background
+
+    - **execution_id**: UUID of the task execution
+    - **message**: User message/request to process
+
+    Returns immediate confirmation that workflow is queued.
+    """
+    # Get execution
+    execution = await TaskExecutionService.get_task_execution(db, execution_id)
+    if not execution:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Task execution {execution_id} not found"
+        )
+
+    # Verify squad ownership
+    await SquadService.verify_squad_ownership(db, execution.squad_id, current_user.id)
+
+    # Update status to "queued"
+    await TaskExecutionService.update_execution_status(
+        db=db,
+        execution_id=execution_id,
+        status="queued",
+    )
+
+    # Send event to Inngest (background execution)
+    try:
+        from backend.core.inngest import inngest
+
+        await inngest.send(
+            event="agent/workflow.execute",
+            data={
+                "task_execution_id": str(execution_id),
+                "squad_id": str(execution.squad_id),
+                "user_id": str(current_user.id),
+                "organization_id": str(current_user.organization_id) if hasattr(current_user, "organization_id") else None,
+                "message": message
+            }
+        )
+
+        return {
+            "status": "queued",
+            "execution_id": str(execution_id),
+            "message": "Workflow started in background - check status for updates",
+            "check_status_at": f"/task-executions/{execution_id}",
+            "estimated_time": "20-40 seconds (typical)",
+            "mode": "async",
+            "provider": "inngest"
+        }
+
+    except ImportError:
+        # Inngest not available - fall back to synchronous execution
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Background job processing not available - Inngest not installed"
+        )
+    except Exception as e:
+        # Log error and update execution status
+        await TaskExecutionService.handle_execution_error(
+            db=db,
+            execution_id=execution_id,
+            error_message=f"Failed to queue workflow: {str(e)}",
+            error_details={"error_type": "inngest_send_failed"}
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to start background workflow: {str(e)}"
+        )

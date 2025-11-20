@@ -81,6 +81,7 @@ class TaskExecution(Base, TimestampMixin):
     squad = relationship("Squad", back_populates="task_executions")
     messages = relationship("AgentMessage", back_populates="task_execution", cascade="all, delete-orphan")
     feedback = relationship("Feedback", back_populates="task_execution", uselist=False)
+    llm_cost_entries = relationship("LLMCostEntry", back_populates="task_execution", cascade="all, delete-orphan")
 
     __table_args__ = (
         Index("ix_task_executions_task_id", "task_id"),
