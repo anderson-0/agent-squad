@@ -32,6 +32,18 @@ export default function Home() {
             className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-center font-medium"
           >
             Get Started
+          </a>
+          <a
+            href="/dashboard"
+            className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+          >
+            View Dashboard
+          </a>
+          <a
+            href="http://localhost:8000/docs"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-6 py-3 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors"
           </Link>
           <Link
             href="/register"
