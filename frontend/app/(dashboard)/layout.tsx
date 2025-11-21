@@ -1,41 +1,38 @@
-'use client';
+/**
+ * Dashboard Layout
+ *
+ * Main layout wrapper for authenticated dashboard pages
+ * - Desktop: Persistent sidebar (240px) + Header + Main content
+ * - Mobile: Header + Drawer sidebar + Main content
+ */
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Sidebar } from '@/components/dashboard/Sidebar';
-import { useAuthStore } from '@/lib/store/auth';
+import { Sidebar } from '@/components/layout/Sidebar';
+import { Header } from '@/components/layout/Header';
+import { MobileNav } from '@/components/layout/MobileNav';
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const router = useRouter();
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-
-  // Protect dashboard routes
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/login');
-    }
-  }, [isAuthenticated, router]);
-
-  // Don't render dashboard if not authenticated
-  if (!isAuthenticated) {
-    return null;
-  }
-
   return (
-    <div className="flex h-screen overflow-hidden">
-      {/* Sidebar */}
+    <div className="min-h-screen">
+      {/* Desktop Sidebar */}
       <Sidebar />
 
-      {/* Main content */}
-      <main className="flex-1 overflow-y-auto bg-gray-50">
-        <div className="container mx-auto p-6">
-          {children}
-        </div>
-      </main>
+      {/* Mobile Drawer */}
+      <MobileNav />
+
+      {/* Main Content Area */}
+      <div className="flex flex-col md:pl-60">
+        {/* Header */}
+        <Header />
+
+        {/* Page Content */}
+        <main className="flex-1">
+          <div className="px-4 py-6 sm:px-6 lg:px-8">{children}</div>
+        </main>
+      </div>
     </div>
   );
 }

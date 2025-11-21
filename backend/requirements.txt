@@ -61,6 +61,9 @@ mcp-atlassian==0.11.9
 PyGithub==2.8.1
 GitPython==3.1.45
 
+# E2B Sandbox (Secure Code Execution)
+e2b-code-interpreter==1.0.4
+
 # Development
 black==23.12.0
 ruff==0.1.7
