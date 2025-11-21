@@ -59,6 +59,16 @@ server_profiles:
       install: "pip install e2b-code-interpreter"
       note: "Get API key at https://e2b.dev - same sandboxing as Lovable and other AI platforms"
 
+    git_operations:
+      command: "python"
+      args: ["-m", "backend.integrations.mcp.servers.git_operations_server"]
+      env:
+        E2B_API_KEY: "${E2B_API_KEY}"
+        GITHUB_TOKEN: "${GITHUB_TOKEN}"
+      description: "Git operations (clone, push, pull, status, diff) using E2B cloud sandboxes"
+      install: "pip install e2b-code-interpreter"
+      note: "Secure git operations with branch-per-agent isolation and automatic retry logic"
+
     database:
       command: "python"
       args: ["-m", "backend.integrations.mcp.servers.database_server"]
@@ -119,6 +129,16 @@ server_profiles:
       description: "Python code execution using E2B cloud sandboxes (secure, isolated)"
       install: "pip install e2b-code-interpreter"
       note: "Get API key at https://e2b.dev - same sandboxing as Lovable and other AI platforms"
+
+    git_operations:
+      command: "python"
+      args: ["-m", "backend.integrations.mcp.servers.git_operations_server"]
+      env:
+        E2B_API_KEY: "${E2B_API_KEY}"
+        GITHUB_TOKEN: "${GITHUB_TOKEN}"
+      description: "Git operations (clone, push, pull, status, diff) using E2B cloud sandboxes"
+      install: "pip install e2b-code-interpreter"
+      note: "Secure git operations with branch-per-agent isolation and automatic retry logic"
 
     database:
       command: "python"
@@ -191,6 +211,7 @@ roles:
   backend_developer:
     mcp_servers:
       - git
+      - git_operations
       - github
     tools:
       git:
@@ -202,6 +223,12 @@ roles:
         - git_commit
         - git_push
         - git_pull
+      git_operations:
+        - git_clone
+        - git_status
+        - git_diff
+        - git_pull
+        - git_push
       github:
         - create_pull_request
         - get_pull_request
@@ -214,6 +241,7 @@ roles:
   frontend_developer:
     mcp_servers:
       - git
+      - git_operations
       - github
     tools:
       git:
@@ -225,6 +253,12 @@ roles:
         - git_commit
         - git_push
         - git_pull
+      git_operations:
+        - git_clone
+        - git_status
+        - git_diff
+        - git_pull
+        - git_push
       github:
         - create_pull_request
         - get_pull_request
@@ -236,9 +270,14 @@ roles:
   # QA Tester: Testing, quality assurance, bug reporting
   qa_tester:
     mcp_servers:
+      - git_operations
       - github
       - jira
     tools:
+      git_operations:
+        - git_clone
+        - git_status
+        - git_diff
       github:
         - create_issue
         - get_issue

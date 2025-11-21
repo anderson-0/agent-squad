@@ -82,6 +82,12 @@ class Settings(BaseSettings):
     # E2B Sandbox (for secure code execution)
     E2B_API_KEY: str = Field(default="", env="E2B_API_KEY")
 
+    # Git Sandbox Configuration (E2B-based git operations)
+    GIT_SANDBOX_TIMEOUT: int = 300  # 5 minutes
+    GIT_SANDBOX_MAX_RETRIES: int = 3  # Max retry attempts for push
+    GIT_SANDBOX_TTL: int = 3600  # 1 hour sandbox TTL
+    GITHUB_DEFAULT_BRANCH: str = "main"  # Default branch for operations
+
     # Pinecone (optional for development)
     PINECONE_API_KEY: str = Field(default="", env="PINECONE_API_KEY")
     PINECONE_ENVIRONMENT: str = Field(default="", env="PINECONE_ENVIRONMENT")
