@@ -16,9 +16,10 @@ import type { Task } from '@/types/squad';
 interface TaskCardProps {
   task: Task;
   index: number;
+  onClick?: () => void;
 }
 
-export function TaskCard({ task, index }: TaskCardProps) {
+export function TaskCard({ task, index, onClick }: TaskCardProps) {
   const {
     attributes,
     listeners,
@@ -29,8 +30,8 @@ export function TaskCard({ task, index }: TaskCardProps) {
 
   const style = transform
     ? {
-        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-      }
+      transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+    }
     : undefined;
 
   const priorityConfig = {
@@ -78,9 +79,9 @@ export function TaskCard({ task, index }: TaskCardProps) {
       }}
     >
       <Card
-        className={`p-4 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow ${
-          isDragging ? 'shadow-lg ring-2 ring-blue-500' : ''
-        }`}
+        onClick={onClick}
+        className={`p-4 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow ${isDragging ? 'shadow-lg ring-2 ring-blue-500' : ''
+          }`}
       >
         {/* Drag Handle & Priority */}
         <div className="flex items-start justify-between gap-2 mb-3">

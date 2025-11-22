@@ -6,7 +6,7 @@
 
 'use client';
 
-import { use } from 'react';
+import { useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
@@ -24,8 +24,11 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { KanbanBoard } from '@/components/squads/KanbanBoard';
 import { AgentAvatar } from '@/components/squads/AgentAvatar';
+import { CreateTaskModal } from '@/components/squads/CreateTaskModal';
+import { AgentDetailsDialog } from '@/components/squads/AgentDetailsDialog';
+import { CreateAgentDialog } from '@/components/squads/CreateAgentDialog';
 import { getSquadById } from '@/lib/mock-data/squads';
-import type { TaskStatus } from '@/types/squad';
+import type { TaskStatus, Agent } from '@/types/squad';
 
 export default function SquadDetailPage({
   params,
@@ -34,6 +37,10 @@ export default function SquadDetailPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
+  const [createTaskStatus, setCreateTaskStatus] = useState<TaskStatus>('pending');
+  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
+  const [isCreateAgentModalOpen, setIsCreateAgentModalOpen] = useState(false);
 
   const squad = getSquadById(id);
 
@@ -57,6 +64,42 @@ export default function SquadDetailPage({
   const handleTaskUpdate = (taskId: string, status: TaskStatus, feedback?: string) => {
     console.log(`Task ${taskId} moved to ${status}`, feedback ? `with feedback: ${feedback}` : '');
     // In real implementation, this would call an API
+  };
+
+  const handleCreateTask = (status: TaskStatus = 'pending') => {
+    setCreateTaskStatus(status);
+    setIsCreateTaskModalOpen(true);
+  };
+
+  const handleTaskSubmit = (task: { title: string; description: string; priority: string; status: TaskStatus }) => {
+    console.log('Creating task:', task);
+    // In real implementation, this would call an API and update the list
+    setIsCreateTaskModalOpen(false);
+  };
+
+  const handleSettings = () => {
+    alert("Settings modal coming soon!");
+  };
+
+  const handleAgentClick = (agent: Agent) => {
+    setSelectedAgent(agent);
+  };
+
+  const handleAgentUpdate = (agentId: string, updates: any) => {
+    console.log(`Updating agent ${agentId}:`, updates);
+    // In real implementation, call API
+    setSelectedAgent(null);
+  };
+
+  const handleCreateAgent = (agentData: any) => {
+    // Mock subscription check
+    if (squad && squad.agents.length >= 5) {
+      alert("Subscription limit reached! Upgrade to Pro to add more agents.");
+      return;
+    }
+    console.log("Creating agent:", agentData);
+    // In real implementation, call API
+    setIsCreateAgentModalOpen(false);
   };
 
   const completedTasks = squad.tasks.filter((t) => t.status === 'done').length;
@@ -95,8 +138,8 @@ export default function SquadDetailPage({
                   squad.status === 'active'
                     ? 'bg-green-500/10 border-green-500/20 text-green-600'
                     : squad.status === 'paused'
-                    ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-600'
-                    : 'bg-blue-500/10 border-blue-500/20 text-blue-600'
+                      ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-600'
+                      : 'bg-blue-500/10 border-blue-500/20 text-blue-600'
                 }
               >
                 {squad.status}
@@ -106,11 +149,11 @@ export default function SquadDetailPage({
           </div>
 
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" className="gap-2">
+            <Button variant="outline" size="sm" className="gap-2" onClick={handleSettings}>
               <Settings className="h-4 w-4" />
               Settings
             </Button>
-            <Button size="sm" className="gap-2">
+            <Button size="sm" className="gap-2" onClick={() => handleCreateTask('pending')}>
               <Plus className="h-4 w-4" />
               Add Task
             </Button>
@@ -189,10 +232,17 @@ export default function SquadDetailPage({
             tasks={squad.tasks}
             agents={squad.agents}
             onTaskUpdate={handleTaskUpdate}
+            onAddTask={handleCreateTask}
           />
         </TabsContent>
 
         <TabsContent value="agents" className="mt-6">
+          <div className="flex justify-end mb-4">
+            <Button size="sm" onClick={() => setIsCreateAgentModalOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Agent
+            </Button>
+          </div>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -205,7 +255,8 @@ export default function SquadDetailPage({
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: index * 0.1 }}
-                className="p-4 rounded-lg border bg-card hover:shadow-md transition-shadow"
+                className="p-4 rounded-lg border bg-card hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => handleAgentClick(agent)}
               >
                 <div className="flex items-start gap-3">
                   <AgentAvatar agent={agent} size="lg" index={index} />
@@ -274,6 +325,26 @@ export default function SquadDetailPage({
           </div>
         </motion.div>
       )}
+
+      <CreateTaskModal
+        isOpen={isCreateTaskModalOpen}
+        onClose={() => setIsCreateTaskModalOpen(false)}
+        onSubmit={handleTaskSubmit}
+        defaultStatus={createTaskStatus}
+      />
+
+      <AgentDetailsDialog
+        agent={selectedAgent}
+        isOpen={!!selectedAgent}
+        onClose={() => setSelectedAgent(null)}
+        onSave={handleAgentUpdate}
+      />
+
+      <CreateAgentDialog
+        isOpen={isCreateAgentModalOpen}
+        onClose={() => setIsCreateAgentModalOpen(false)}
+        onSubmit={handleCreateAgent}
+      />
     </div>
   );
 }

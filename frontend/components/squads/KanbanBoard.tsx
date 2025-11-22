@@ -20,12 +20,14 @@ import { Button } from '@/components/ui/button';
 import { TaskCard } from './TaskCard';
 import { WIPLimitModal } from './WIPLimitModal';
 import { ReviewFeedbackModal } from './ReviewFeedbackModal';
+import { TaskDetailsDialog } from './TaskDetailsDialog';
 import type { Task, TaskStatus, Agent } from '@/types/squad';
 
 interface KanbanBoardProps {
   tasks: Task[];
   agents: Agent[];
   onTaskUpdate?: (taskId: string, status: TaskStatus, feedback?: string) => void;
+  onAddTask?: (status: TaskStatus) => void;
 }
 
 const columns: { id: TaskStatus; title: string; color: string }[] = [
@@ -57,13 +59,14 @@ function DroppableColumn({
   );
 }
 
-export function KanbanBoard({ tasks, agents, onTaskUpdate }: KanbanBoardProps) {
+export function KanbanBoard({ tasks, agents, onTaskUpdate, onAddTask }: KanbanBoardProps) {
   const [taskList, setTaskList] = useState(tasks);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [showWIPModal, setShowWIPModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [pendingTask, setPendingTask] = useState<Task | null>(null);
   const [pendingStatus, setPendingStatus] = useState<TaskStatus | null>(null);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -217,7 +220,12 @@ export function KanbanBoard({ tasks, agents, onTaskUpdate }: KanbanBoardProps) {
                         {columnTasks.length} task{columnTasks.length !== 1 ? 's' : ''}
                       </p>
                     </div>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => onAddTask?.(column.id)}
+                    >
                       <Plus className="h-4 w-4" />
                     </Button>
                   </div>
@@ -231,6 +239,7 @@ export function KanbanBoard({ tasks, agents, onTaskUpdate }: KanbanBoardProps) {
                         key={task.id}
                         task={task}
                         index={index}
+                        onClick={() => setSelectedTask(task)}
                       />
                     ))}
                   </AnimatePresence>
@@ -277,6 +286,12 @@ export function KanbanBoard({ tasks, agents, onTaskUpdate }: KanbanBoardProps) {
         onSubmit={handleFeedbackSubmit}
         taskTitle={pendingTask?.title || ''}
         hasAvailableAgents={availableAgentsCount > 0}
+      />
+
+      <TaskDetailsDialog
+        task={selectedTask}
+        isOpen={!!selectedTask}
+        onClose={() => setSelectedTask(null)}
       />
     </DndContext>
   );
