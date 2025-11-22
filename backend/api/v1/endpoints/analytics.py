@@ -1,177 +1,89 @@
-"""
-Analytics API Endpoints (Stream K)
-
-Provides API for:
-- Workflow analytics
-- Workflow graph visualization
-- Historical metrics
-"""
-from typing import Dict, Any
+from typing import List, Dict, Any
 from uuid import UUID
+from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Path, status
+from fastapi import APIRouter, Depends, status, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, and_, desc
 
 from backend.core.database import get_db
 from backend.core.auth import get_current_user
 from backend.models.user import User
-from backend.models.project import TaskExecution
-from backend.services.analytics_service import get_analytics_service, WorkflowAnalytics
-from backend.schemas.analytics import (
-    WorkflowAnalyticsResponse,
-    WorkflowGraphResponse,
-    PhaseDistribution,
-    CoherenceTrend,
-)
-from datetime import datetime
-from backend.core.logging import logger
-
+from backend.models.analytics import SquadMetrics
+from backend.services.squad_service import SquadService
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 
-
 @router.get(
-    "/workflows/{execution_id}",
-    response_model=WorkflowAnalyticsResponse,
-    summary="Get workflow analytics",
-    description="Get comprehensive analytics for a workflow"
+    "/squad/{squad_id}",
+    summary="Get squad analytics",
+    description="Get aggregated metrics for a squad"
 )
-async def get_workflow_analytics(
-    execution_id: UUID = Path(..., description="Task execution ID"),
+async def get_squad_analytics(
+    squad_id: UUID,
+    days: int = Query(7, ge=1, le=90),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-) -> WorkflowAnalyticsResponse:
+    db: AsyncSession = Depends(get_db)
+) -> Dict[str, Any]:
     """
-    Get comprehensive analytics for a workflow.
-    
-    Returns:
-    - Completion metrics
-    - Phase distribution
-    - Branch information
-    - Agent performance
-    - Coherence trends
+    Get aggregated analytics for a squad.
     """
-    try:
-        # Validate execution
-        execution = await db.get(TaskExecution, execution_id)
-        if not execution:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Task execution {execution_id} not found"
-            )
-        
-        # Calculate analytics
-        analytics_service = get_analytics_service()
-        analytics = await analytics_service.calculate_workflow_analytics(
-            db=db,
-            execution_id=execution_id,
-        )
-        
-        # Convert to response
-        return WorkflowAnalyticsResponse(
-            execution_id=analytics.execution_id,
-            completion_rate=analytics.completion_rate,
-            average_task_duration_hours=analytics.average_task_duration_hours,
-            phase_distribution=PhaseDistribution(
-                investigation=analytics.phase_distribution.get("investigation", 0),
-                building=analytics.phase_distribution.get("building", 0),
-                validation=analytics.phase_distribution.get("validation", 0),
-            ),
-            branch_count=analytics.branch_count,
-            discovery_to_value_conversion=analytics.discovery_to_value_conversion,
-            agent_performance={str(k): v for k, v in analytics.agent_performance.items()},
-            coherence_trends=[
-                CoherenceTrend(
-                    agent_id=UUID(trend["agent_id"]),
-                    coherence_score=trend["coherence_score"],
-                    calculated_at=datetime.fromisoformat(trend["calculated_at"].replace("Z", "+00:00")),
-                    phase=trend["phase"],
-                )
-                for trend in analytics.coherence_trends
-            ],
-            calculated_at=analytics.calculated_at,
-        )
+    # Verify squad ownership
+    await SquadService.verify_squad_ownership(db, squad_id, current_user.id)
     
-    except HTTPException:
-        raise
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except Exception as e:
-        logger.error(f"Error calculating analytics: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to calculate analytics: {str(e)}"
-        )
-
-
-@router.get(
-    "/workflows/{execution_id}/graph",
-    response_model=WorkflowGraphResponse,
-    summary="Get workflow graph",
-    description="Get workflow graph data for visualization"
-)
-async def get_workflow_graph(
-    execution_id: UUID = Path(..., description="Task execution ID"),
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-) -> WorkflowGraphResponse:
-    """
-    Get workflow graph data for visualization.
+    start_date = datetime.utcnow() - timedelta(days=days)
     
-    Returns nodes (tasks), edges (dependencies), and branches.
-    """
-    try:
-        # Validate execution
-        execution = await db.get(TaskExecution, execution_id)
-        if not execution:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Task execution {execution_id} not found"
-            )
-        
-        # Get graph data
-        analytics_service = get_analytics_service()
-        graph_data = await analytics_service.get_workflow_graph_data(
-            db=db,
-            execution_id=execution_id,
+    # Get metrics
+    stmt = select(SquadMetrics).where(
+        and_(
+            SquadMetrics.squad_id == squad_id,
+            SquadMetrics.start_time >= start_date
         )
-        
-        return WorkflowGraphResponse(
-            nodes=[
-                {
-                    "id": node["id"],
-                    "title": node["title"],
-                    "phase": node["phase"],
-                    "status": node["status"],
-                    "created_at": node["created_at"],
-                }
-                for node in graph_data["nodes"]
-            ],
-            edges=[
-                WorkflowGraphEdge(
-                    from_node=edge["from"],
-                    to=edge["to"],
-                    type=edge["type"],
-                )
-                for edge in graph_data["edges"]
-            ],
-            branches=[
-                {
-                    "id": branch["id"],
-                    "name": branch["name"],
-                    "phase": branch["phase"],
-                    "status": branch["status"],
-                }
-                for branch in graph_data["branches"]
-            ],
-            phases=graph_data["phases"],
-        )
+    ).order_by(SquadMetrics.start_time.asc())
     
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error getting workflow graph: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get workflow graph: {str(e)}"
-        )
+    result = await db.execute(stmt)
+    metrics = result.scalars().all()
+    
+    # Aggregate for summary
+    total_questions = sum(m.total_questions for m in metrics)
+    total_resolved = sum(m.total_resolved for m in metrics)
+    total_escalated = sum(m.total_escalated for m in metrics)
+    total_timeouts = sum(m.total_timeouts for m in metrics)
+    
+    # Weighted averages
+    if total_resolved > 0:
+        avg_time = sum(m.avg_resolution_time_seconds * m.total_resolved for m in metrics) / total_resolved
+    else:
+        avg_time = 0
+        
+    # Time series data for charts
+    time_series = [
+        {
+            "timestamp": m.start_time.isoformat(),
+            "questions": m.total_questions,
+            "resolved": m.total_resolved,
+            "escalated": m.total_escalated,
+            "avg_time": m.avg_resolution_time_seconds
+        }
+        for m in metrics
+    ]
+    
+    # Aggregate question types
+    question_types = {}
+    for m in metrics:
+        for q_type, count in m.questions_by_type.items():
+            question_types[q_type] = question_types.get(q_type, 0) + count
+            
+    return {
+        "summary": {
+            "total_questions": total_questions,
+            "total_resolved": total_resolved,
+            "total_escalated": total_escalated,
+            "total_timeouts": total_timeouts,
+            "avg_resolution_time_seconds": avg_time,
+            "resolution_rate": (total_resolved / total_questions * 100) if total_questions > 0 else 0,
+            "escalation_rate": (total_escalated / total_questions * 100) if total_questions > 0 else 0
+        },
+        "time_series": time_series,
+        "question_types": question_types
+    }

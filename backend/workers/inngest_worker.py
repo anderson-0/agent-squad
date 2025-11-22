@@ -121,9 +121,10 @@ async def run_worker():
             execute_agent_workflow,
             execute_single_agent_workflow,
         )
+        from backend.workflows.analytics_workflows import generate_hourly_analytics
 
         logger.info(
-            "Registered workflows: execute_agent_workflow, execute_single_agent_workflow"
+            "Registered workflows: execute_agent_workflow, execute_single_agent_workflow, generate_hourly_analytics"
         )
 
         # The actual worker execution is handled by Inngest

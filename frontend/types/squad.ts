@@ -9,6 +9,15 @@ export type AgentStatus = 'idle' | 'thinking' | 'working' | 'completed' | 'error
 export type TaskStatus = 'pending' | 'in_progress' | 'in_review' | 'done';
 export type TaskPriority = 'low' | 'medium' | 'high';
 
+export interface GitContext {
+  repo_url: string;
+  current_branch?: string;
+  base_branch?: string;
+  last_commit_sha?: string;
+  last_commit_message?: string;
+  uncommitted_changes?: number;
+}
+
 export interface AgentStats {
   tasks_completed: number;
   success_rate: number;
@@ -23,6 +32,8 @@ export interface Agent {
   current_task_id?: string;
   avatar_url?: string;
   stats: AgentStats;
+  sandbox_id?: string; // E2B sandbox instance
+  git_context?: GitContext; // Git repository context
 }
 
 export interface Subtask {
@@ -44,6 +55,8 @@ export interface Task {
   subtasks?: Subtask[];
   time_estimate_hours?: number;
   time_elapsed_hours?: number;
+  git_branch?: string; // Git branch for this task (e.g., task-123)
+  pull_request_url?: string; // GitHub PR URL
 }
 
 export interface Squad {

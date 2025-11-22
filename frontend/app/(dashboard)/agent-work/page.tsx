@@ -16,6 +16,8 @@ import {
   Brain,
   Zap,
   Filter,
+  Wifi,
+  WifiOff,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +27,7 @@ import { AgentAvatar } from '@/components/squads/AgentAvatar';
 import { ActivityCard } from '@/components/agent-work/ActivityCard';
 import { ThoughtCard } from '@/components/agent-work/ThoughtCard';
 import { ConversationView } from '@/components/agent-work/ConversationView';
+import { useSSE } from '@/lib/hooks/useSSE';
 import { mockSquads } from '@/lib/mock-data/squads';
 import {
   mockActivities,
@@ -36,6 +39,8 @@ import type { Agent } from '@/types/squad';
 export default function AgentWorkPage() {
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [autoScroll, setAutoScroll] = useState(true);
+  const [realtimeActivities, setRealtimeActivities] = useState<any[]>([]);
+  const [realtimeThoughts, setRealtimeThoughts] = useState<any[]>([]);
 
   // Get all agents from all squads
   const allAgents = mockSquads.flatMap((squad) => squad.agents);
@@ -43,14 +48,99 @@ export default function AgentWorkPage() {
     (a) => a.status === 'working' || a.status === 'thinking'
   );
 
+  // SSE Connection for real-time updates
+  // Connect to squad stream (you can change this to execution stream)
+  const squadId = mockSquads[0]?.id; // Use first squad for demo
+  const { isConnected, lastMessage } = useSSE({
+    url: squadId ? `/squads/${squadId}/stream` : '',
+    autoConnect: !!squadId,
+    onMessage: (event) => {
+      console.log('[SSE] Received event:', event);
+
+      // Handle different event types
+      switch (event.event) {
+        case 'status_update':
+          // Add to activities
+          setRealtimeActivities((prev) => [
+            {
+              id: event.id || Date.now().toString(),
+              agent_id: event.data.agent_id,
+              type: 'status_update',
+              message: event.data.message || 'Status updated',
+              timestamp: new Date().toISOString(),
+              metadata: event.data,
+            },
+            ...prev,
+          ]);
+          break;
+
+        case 'log':
+          // Add to thoughts (agent reasoning)
+          setRealtimeThoughts((prev) => [
+            {
+              id: event.id || Date.now().toString(),
+              agent_id: event.data.agent_id,
+              content: event.data.message,
+              timestamp: new Date().toISOString(),
+              metadata: event.data,
+            },
+            ...prev,
+          ]);
+          break;
+
+        case 'completed':
+          // Trigger confetti on completion
+          confetti({
+            particleCount: 100,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b'],
+          });
+          setRealtimeActivities((prev) => [
+            {
+              id: event.id || Date.now().toString(),
+              agent_id: event.data.agent_id,
+              type: 'task_completed',
+              message: 'Task completed successfully!',
+              timestamp: new Date().toISOString(),
+              metadata: event.data,
+            },
+            ...prev,
+          ]);
+          break;
+
+        case 'error':
+          setRealtimeActivities((prev) => [
+            {
+              id: event.id || Date.now().toString(),
+              agent_id: event.data.agent_id,
+              type: 'error',
+              message: event.data.error || 'An error occurred',
+              timestamp: new Date().toISOString(),
+              metadata: event.data,
+            },
+            ...prev,
+          ]);
+          break;
+      }
+    },
+    onError: (error) => {
+      console.error('[SSE] Connection error:', error);
+    },
+  });
+
+  // Combine mock data with real-time data (real-time first)
+  const combinedActivities = [...realtimeActivities, ...mockActivities];
+  const combinedThoughts = [...realtimeThoughts, ...mockThoughts];
+
   // Filter activities by selected agent
   const filteredActivities = selectedAgentId
-    ? mockActivities.filter((a) => a.agent_id === selectedAgentId)
-    : mockActivities;
+    ? combinedActivities.filter((a) => a.agent_id === selectedAgentId)
+    : combinedActivities;
 
   const filteredThoughts = selectedAgentId
-    ? mockThoughts.filter((t) => t.agent_id === selectedAgentId)
-    : mockThoughts;
+    ? combinedThoughts.filter((t) => t.agent_id === selectedAgentId)
+    : combinedThoughts;
 
   // Get all messages
   const allMessages = mockConversations.flatMap((c) => c.messages);
@@ -97,6 +187,21 @@ export default function AgentWorkPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            <Badge
+              variant={isConnected ? 'default' : 'outline'}
+              className={`gap-2 ${
+                isConnected
+                  ? 'bg-green-600 text-white'
+                  : 'text-muted-foreground'
+              }`}
+            >
+              {isConnected ? (
+                <Wifi className="h-3 w-3" />
+              ) : (
+                <WifiOff className="h-3 w-3" />
+              )}
+              {isConnected ? 'Live' : 'Offline'}
+            </Badge>
             <Badge variant="outline" className="gap-2">
               <Activity className="h-3 w-3 text-green-600" />
               {activeAgents.length} Active
