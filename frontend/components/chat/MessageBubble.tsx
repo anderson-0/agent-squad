@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { AgentAvatar } from '@/components/squads/AgentAvatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Message } from './useChat';
 import { motion } from 'framer-motion';
 
@@ -10,6 +10,15 @@ interface MessageBubbleProps {
 }
 
 export function MessageBubble({ message, isCurrentUser, agent }: MessageBubbleProps) {
+    const initials = agent?.name
+        ? agent.name
+            .split(' ')
+            .map((n) => n[0])
+            .join('')
+            .toUpperCase()
+            .slice(0, 2)
+        : 'AG';
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -20,13 +29,11 @@ export function MessageBubble({ message, isCurrentUser, agent }: MessageBubblePr
             )}
         >
             <div className="flex-shrink-0">
-                <AgentAvatar
-                    agent={{
-                        role: agent?.role || 'Agent',
-                        name: agent?.name || 'Agent'
-                    }}
-                    className="h-8 w-8"
-                />
+                <Avatar className="h-8 w-8 border-2 border-background">
+                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-medium text-xs">
+                        {initials}
+                    </AvatarFallback>
+                </Avatar>
             </div>
 
             <div className={cn(

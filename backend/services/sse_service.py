@@ -11,6 +11,7 @@ from datetime import datetime
 from collections import defaultdict
 
 from backend.core.logging import logger
+from backend.core.config import settings
 
 
 class SSEConnectionManager:
@@ -35,8 +36,11 @@ class SSEConnectionManager:
         # Connection metadata
         self.connection_metadata: Dict[asyncio.Queue, Dict[str, Any]] = {}
 
-        # Heartbeat interval (seconds)
-        self.heartbeat_interval = 15
+        # Heartbeat tasks for supervision
+        self.heartbeat_tasks: Dict[asyncio.Queue, asyncio.Task] = {}
+
+        # Heartbeat interval (seconds) - configurable via settings
+        self.heartbeat_interval = settings.SSE_HEARTBEAT_INTERVAL
 
     async def subscribe_to_execution(
         self,
@@ -53,22 +57,26 @@ class SSEConnectionManager:
         Yields:
             SSE formatted messages
         """
-        # Create queue for this connection
-        queue: asyncio.Queue = asyncio.Queue(maxsize=100)
-
-        # Register connection
-        self.execution_connections[execution_id].add(queue)
-        self.all_connections.add(queue)
-        self.connection_metadata[queue] = {
-            "execution_id": execution_id,
-            "user_id": user_id,
-            "connected_at": datetime.utcnow().isoformat(),
-            "type": "execution",
-        }
-
-        logger.info(f"SSE connection established for execution {execution_id} by user {user_id}")
+        # Create queue for this connection - configurable size via settings
+        queue: asyncio.Queue = asyncio.Queue(maxsize=settings.SSE_QUEUE_SIZE)
+        heartbeat_task = None
 
         try:
+            # Register connection
+            self.execution_connections[execution_id].add(queue)
+            self.all_connections.add(queue)
+            self.connection_metadata[queue] = {
+                "execution_id": execution_id,
+                "user_id": user_id,
+                "connected_at": datetime.utcnow().isoformat(),
+                "type": "execution",
+            }
+
+            logger.info(
+                f"SSE connection established for execution {execution_id} by user {user_id}",
+                extra={"execution_id": str(execution_id), "user_id": str(user_id), "event": "sse_connect"}
+            )
+
             # Send initial connection message
             yield self._format_sse_message({
                 "event": "connected",
@@ -79,8 +87,12 @@ class SSEConnectionManager:
                 }
             })
 
-            # Start heartbeat task
-            heartbeat_task = asyncio.create_task(self._send_heartbeat(queue))
+            # Start heartbeat task with supervision
+            heartbeat_task = asyncio.create_task(
+                self._send_heartbeat(queue, execution_id),
+                name=f"heartbeat-exec-{execution_id}"
+            )
+            self.heartbeat_tasks[queue] = heartbeat_task
 
             # Stream messages
             while True:
@@ -92,6 +104,10 @@ class SSEConnectionManager:
                     )
 
                     if message is None:  # Sentinel value to close connection
+                        logger.info(
+                            f"SSE connection closed normally for execution {execution_id}",
+                            extra={"execution_id": str(execution_id), "event": "sse_close_normal"}
+                        )
                         break
 
                     yield self._format_sse_message(message)
@@ -104,19 +120,39 @@ class SSEConnectionManager:
                     })
 
         except asyncio.CancelledError:
-            logger.info(f"SSE connection cancelled for execution {execution_id}")
+            logger.info(
+                f"SSE connection cancelled for execution {execution_id}",
+                extra={"execution_id": str(execution_id), "event": "sse_cancelled"}
+            )
             raise
 
         except Exception as e:
-            logger.error(f"Error in SSE stream for execution {execution_id}: {e}")
-            yield self._format_sse_message({
-                "event": "error",
-                "data": {"error": str(e)}
-            })
+            logger.error(
+                f"Error in SSE stream for execution {execution_id}: {e}",
+                extra={"execution_id": str(execution_id), "error": str(e), "event": "sse_error"},
+                exc_info=True
+            )
+            try:
+                yield self._format_sse_message({
+                    "event": "error",
+                    "data": {"error": str(e)}
+                })
+            except Exception:
+                # Don't let error message sending prevent cleanup
+                pass
 
         finally:
-            # Cleanup
-            heartbeat_task.cancel()
+            # Guaranteed cleanup regardless of how we exit
+            if heartbeat_task is not None:
+                heartbeat_task.cancel()
+                try:
+                    await heartbeat_task
+                except asyncio.CancelledError:
+                    pass
+                # Remove from tracked tasks
+                self.heartbeat_tasks.pop(queue, None)
+
+            # Always cleanup connection tracking
             await self._disconnect(queue, execution_id)
 
     async def subscribe_to_squad(
@@ -134,22 +170,26 @@ class SSEConnectionManager:
         Yields:
             SSE formatted messages
         """
-        # Create queue for this connection
-        queue: asyncio.Queue = asyncio.Queue(maxsize=100)
-
-        # Register connection
-        self.squad_connections[squad_id].add(queue)
-        self.all_connections.add(queue)
-        self.connection_metadata[queue] = {
-            "squad_id": squad_id,
-            "user_id": user_id,
-            "connected_at": datetime.utcnow().isoformat(),
-            "type": "squad",
-        }
-
-        logger.info(f"SSE connection established for squad {squad_id} by user {user_id}")
+        # Create queue for this connection - configurable size via settings
+        queue: asyncio.Queue = asyncio.Queue(maxsize=settings.SSE_QUEUE_SIZE)
+        heartbeat_task = None
 
         try:
+            # Register connection
+            self.squad_connections[squad_id].add(queue)
+            self.all_connections.add(queue)
+            self.connection_metadata[queue] = {
+                "squad_id": squad_id,
+                "user_id": user_id,
+                "connected_at": datetime.utcnow().isoformat(),
+                "type": "squad",
+            }
+
+            logger.info(
+                f"SSE connection established for squad {squad_id} by user {user_id}",
+                extra={"squad_id": str(squad_id), "user_id": str(user_id), "event": "sse_connect"}
+            )
+
             # Send initial connection message
             yield self._format_sse_message({
                 "event": "connected",
@@ -160,8 +200,12 @@ class SSEConnectionManager:
                 }
             })
 
-            # Start heartbeat task
-            heartbeat_task = asyncio.create_task(self._send_heartbeat(queue))
+            # Start heartbeat task with supervision
+            heartbeat_task = asyncio.create_task(
+                self._send_heartbeat(queue, squad_id),
+                name=f"heartbeat-squad-{squad_id}"
+            )
+            self.heartbeat_tasks[queue] = heartbeat_task
 
             # Stream messages
             while True:
@@ -173,6 +217,10 @@ class SSEConnectionManager:
                     )
 
                     if message is None:  # Sentinel value to close connection
+                        logger.info(
+                            f"SSE connection closed normally for squad {squad_id}",
+                            extra={"squad_id": str(squad_id), "event": "sse_close_normal"}
+                        )
                         break
 
                     yield self._format_sse_message(message)
@@ -185,19 +233,39 @@ class SSEConnectionManager:
                     })
 
         except asyncio.CancelledError:
-            logger.info(f"SSE connection cancelled for squad {squad_id}")
+            logger.info(
+                f"SSE connection cancelled for squad {squad_id}",
+                extra={"squad_id": str(squad_id), "event": "sse_cancelled"}
+            )
             raise
 
         except Exception as e:
-            logger.error(f"Error in SSE stream for squad {squad_id}: {e}")
-            yield self._format_sse_message({
-                "event": "error",
-                "data": {"error": str(e)}
-            })
+            logger.error(
+                f"Error in SSE stream for squad {squad_id}: {e}",
+                extra={"squad_id": str(squad_id), "error": str(e), "event": "sse_error"},
+                exc_info=True
+            )
+            try:
+                yield self._format_sse_message({
+                    "event": "error",
+                    "data": {"error": str(e)}
+                })
+            except Exception:
+                # Don't let error message sending prevent cleanup
+                pass
 
         finally:
-            # Cleanup
-            heartbeat_task.cancel()
+            # Guaranteed cleanup regardless of how we exit
+            if heartbeat_task is not None:
+                heartbeat_task.cancel()
+                try:
+                    await heartbeat_task
+                except asyncio.CancelledError:
+                    pass
+                # Remove from tracked tasks
+                self.heartbeat_tasks.pop(queue, None)
+
+            # Always cleanup connection tracking
             await self._disconnect_squad(queue, squad_id)
 
     async def broadcast_to_execution(
@@ -280,14 +348,30 @@ class SSEConnectionManager:
 
         logger.debug(f"Broadcast {event} to {len(connections)} connections for squad {squad_id}")
 
-    async def _send_heartbeat(self, queue: asyncio.Queue) -> None:
-        """Send periodic heartbeat to keep connection alive"""
+    async def _send_heartbeat(self, queue: asyncio.Queue, resource_id: UUID) -> None:
+        """
+        Send periodic heartbeat to keep connection alive.
+
+        Args:
+            queue: Connection queue
+            resource_id: Execution or Squad ID for logging
+
+        Note: Heartbeats are actually sent in main loop via timeout.
+        This task just keeps the connection supervised.
+        """
         try:
             while True:
                 await asyncio.sleep(self.heartbeat_interval)
                 # Heartbeat is sent in the main loop via timeout
         except asyncio.CancelledError:
-            pass
+            logger.debug(f"Heartbeat task cancelled for resource {resource_id}")
+        except Exception as e:
+            # Log unexpected errors in heartbeat task
+            logger.error(
+                f"Unexpected error in heartbeat task for resource {resource_id}: {e}",
+                extra={"resource_id": str(resource_id), "error": str(e)},
+                exc_info=True
+            )
 
     async def _disconnect(self, queue: asyncio.Queue, execution_id: UUID) -> None:
         """Disconnect and cleanup connection"""

@@ -9,6 +9,7 @@
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { MobileNav } from '@/components/layout/MobileNav';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 export default function DashboardLayout({
   children,
@@ -30,7 +31,9 @@ export default function DashboardLayout({
 
         {/* Page Content */}
         <main className="flex-1">
-          <div className="px-4 py-6 sm:px-6 lg:px-8">{children}</div>
+          <div className="px-4 py-6 sm:px-6 lg:px-8">
+            <ErrorBoundary>{children}</ErrorBoundary>
+          </div>
         </main>
       </div>
     </div>

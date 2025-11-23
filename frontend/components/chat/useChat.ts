@@ -33,6 +33,8 @@ export function useChat(squadId: string) {
     const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
     const [agents, setAgents] = useState<Record<string, Agent>>({});
     const [isConnected, setIsConnected] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [streamingMessage, setStreamingMessage] = useState<{
         conversationId: string;
         content: string;
@@ -41,18 +43,41 @@ export function useChat(squadId: string) {
 
     const eventSourceRef = useRef<EventSource | null>(null);
 
-    // Fetch initial conversations
+    // Fetch squad members (agents) and conversations
     useEffect(() => {
         if (!squadId) return;
 
-        const fetchConversations = async () => {
+        const fetchData = async () => {
             try {
-                const res = await fetch(`/api/v1/conversations/squads/${squadId}/conversations?limit=20`, {
-                    credentials: 'include' // Include cookies for authentication
+                setIsLoading(true);
+                setError(null);
+
+                // Fetch squad members to get agent information
+                const membersRes = await fetch(`/api/v1/squads/${squadId}/members`, {
+                    credentials: 'include'
                 });
-                if (res.ok) {
-                    const data = await res.json();
-                    // Transform data to match interface if needed
+
+                if (membersRes.ok) {
+                    const membersData = await membersRes.json();
+                    const agentsMap: Record<string, Agent> = {};
+                    membersData.forEach((member: any) => {
+                        agentsMap[member.id] = {
+                            id: member.id,
+                            role: member.role,
+                            name: member.name || member.role.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
+                            avatar: member.avatar_url
+                        };
+                    });
+                    setAgents(agentsMap);
+                }
+
+                // Fetch conversations
+                const convRes = await fetch(`/api/v1/conversations/squads/${squadId}/conversations?limit=20`, {
+                    credentials: 'include'
+                });
+
+                if (convRes.ok) {
+                    const data = await convRes.json();
                     setConversations(data.map((c: any) => ({
                         id: c.id,
                         askerId: c.asker_id,
@@ -60,15 +85,20 @@ export function useChat(squadId: string) {
                         state: c.current_state,
                         questionType: c.question_type,
                         createdAt: c.created_at,
-                        messages: [] // Messages fetched on select
+                        messages: []
                     })));
+                } else {
+                    throw new Error('Failed to fetch conversations');
                 }
             } catch (error) {
-                console.error('Failed to fetch conversations:', error);
+                console.error('Failed to fetch data:', error);
+                setError(error instanceof Error ? error.message : 'Failed to load chat data');
+            } finally {
+                setIsLoading(false);
             }
         };
 
-        fetchConversations();
+        fetchData();
     }, [squadId]);
 
     // Connect to SSE
@@ -164,7 +194,10 @@ export function useChat(squadId: string) {
         conversations,
         activeConversationId,
         setActiveConversationId,
+        agents,
         isConnected,
+        isLoading,
+        error,
         streamingMessage,
         fetchConversationDetails
     };

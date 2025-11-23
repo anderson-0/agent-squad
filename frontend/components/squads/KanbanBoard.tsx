@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -67,6 +67,11 @@ export function KanbanBoard({ tasks, agents, onTaskUpdate, onAddTask }: KanbanBo
   const [pendingTask, setPendingTask] = useState<Task | null>(null);
   const [pendingStatus, setPendingStatus] = useState<TaskStatus | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+
+  // Sync task list with prop changes to prevent stale state
+  useEffect(() => {
+    setTaskList(tasks);
+  }, [tasks]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {

@@ -23,6 +23,7 @@ import { Input } from '@/components/ui/input';
 import { authApi } from '@/lib/api/auth';
 import { useAuthStore } from '@/lib/store/auth';
 import type { LoginRequest } from '@/types/auth';
+import { getErrorMessage } from '@/lib/axios';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -87,11 +88,12 @@ export function LoginForm() {
       });
       router.push('/');
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       setShouldShake(true);
       setTimeout(() => setShouldShake(false), 400);
 
-      const message = error.response?.data?.detail || 'Invalid email or password';
+      // Use typed error handling
+      const message = getErrorMessage(error, 'Invalid email or password');
       toast.error('Login failed', {
         description: message,
       });

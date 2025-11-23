@@ -47,7 +47,13 @@
       "WebFetch(domain:docs.e2b.dev)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:docs.github.com)",
-      "WebFetch(domain:www.conventionalcommits.org)"
+      "WebFetch(domain:www.conventionalcommits.org)",
+      "Bash(alembic revision:*)",
+      "Bash(pytest:*)",
+      "Bash(pip3 install:*)",
+      "Bash(uv --version:*)",
+      "Skill(repomix)",
+      "Bash(repomix:*)"
     ],
     "deny": [],
     "ask": []

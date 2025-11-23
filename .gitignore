@@ -80,3 +80,4 @@ logs/
 .secrets/
 temp/
 tmp/
+plans/

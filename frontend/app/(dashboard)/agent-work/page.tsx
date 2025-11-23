@@ -18,6 +18,7 @@ import {
   Filter,
   Wifi,
   WifiOff,
+  Box,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +28,7 @@ import { AgentAvatar } from '@/components/squads/AgentAvatar';
 import { ActivityCard } from '@/components/agent-work/ActivityCard';
 import { ThoughtCard } from '@/components/agent-work/ThoughtCard';
 import { ConversationView } from '@/components/agent-work/ConversationView';
+import { SandboxProgressCard } from '@/components/agent-work/SandboxProgressCard';
 import { useSSE } from '@/lib/hooks/useSSE';
 import { mockSquads } from '@/lib/mock-data/squads';
 import {
@@ -35,12 +37,14 @@ import {
   mockThoughts,
 } from '@/lib/mock-data/agent-activities';
 import type { Agent } from '@/types/squad';
+import type { SandboxProgress, SandboxEvent } from '@/types/sandbox';
 
 export default function AgentWorkPage() {
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [autoScroll, setAutoScroll] = useState(true);
   const [realtimeActivities, setRealtimeActivities] = useState<any[]>([]);
   const [realtimeThoughts, setRealtimeThoughts] = useState<any[]>([]);
+  const [sandboxes, setSandboxes] = useState<Map<string, SandboxProgress>>(new Map());
 
   // Get all agents from all squads
   const allAgents = mockSquads.flatMap((squad) => squad.agents);
@@ -122,12 +126,54 @@ export default function AgentWorkPage() {
             ...prev,
           ]);
           break;
+
+        // Sandbox events
+        case 'sandbox_created':
+        case 'git_operation':
+        case 'pr_created':
+        case 'sandbox_terminated':
+        case 'sandbox_error':
+        case 'pr_approved':
+        case 'pr_merged':
+        case 'pr_closed':
+        case 'pr_reopened':
+          // Initialize sandbox if it doesn't exist
+          setSandboxes((prev) => {
+            const sandboxId = event.data.sandbox_id;
+            if (!sandboxId) return prev;
+
+            const newMap = new Map(prev);
+            if (!newMap.has(sandboxId) && event.event === 'sandbox_created') {
+              newMap.set(sandboxId, {
+                sandbox_id: sandboxId,
+                e2b_id: event.data.e2b_id || '',
+                status: 'CREATED',
+                workflow_steps: [
+                  { id: 'clone', label: 'Clone Repo', status: 'pending' },
+                  { id: 'create_branch', label: 'Create Branch', status: 'pending' },
+                  { id: 'commit', label: 'Commit Changes', status: 'pending' },
+                  { id: 'push', label: 'Push to Remote', status: 'pending' },
+                ],
+                created_at: event.data.timestamp || new Date().toISOString(),
+                last_updated: event.data.timestamp || new Date().toISOString(),
+              });
+            }
+            return newMap;
+          });
+          break;
       }
     },
     onError: (error) => {
       console.error('[SSE] Connection error:', error);
     },
   });
+
+  // Handler for sandbox events (passed to SandboxProgressCard)
+  const handleSandboxEvent = (event: SandboxEvent) => {
+    console.log('[Sandbox Event]', event);
+    // Events are already handled in SSE onMessage
+    // This handler is for component-specific logic if needed
+  };
 
   // Combine mock data with real-time data (real-time first)
   const combinedActivities = [...realtimeActivities, ...mockActivities];
@@ -285,10 +331,19 @@ export default function AgentWorkPage() {
           className="flex-1 overflow-hidden"
         >
           <Tabs defaultValue="activity" className="h-full flex flex-col">
-            <TabsList className="grid w-full max-w-md grid-cols-3">
+            <TabsList className="grid w-full max-w-2xl grid-cols-4">
               <TabsTrigger value="activity" className="gap-2">
                 <Activity className="h-4 w-4" />
                 Activity
+              </TabsTrigger>
+              <TabsTrigger value="sandboxes" className="gap-2">
+                <Box className="h-4 w-4" />
+                Sandboxes
+                {sandboxes.size > 0 && (
+                  <Badge variant="secondary" className="ml-1 h-5 min-w-5 px-1">
+                    {sandboxes.size}
+                  </Badge>
+                )}
               </TabsTrigger>
               <TabsTrigger value="conversations" className="gap-2">
                 <MessageCircle className="h-4 w-4" />
@@ -315,6 +370,27 @@ export default function AgentWorkPage() {
                   <h3 className="text-lg font-semibold mb-2">No activity yet</h3>
                   <p className="text-sm text-muted-foreground">
                     Agent activities will appear here in real-time
+                  </p>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="sandboxes" className="flex-1 overflow-y-auto mt-6 space-y-3">
+              {sandboxes.size > 0 ? (
+                Array.from(sandboxes.values()).map((sandbox) => (
+                  <SandboxProgressCard
+                    key={sandbox.sandbox_id}
+                    sandboxId={sandbox.sandbox_id}
+                    initialProgress={sandbox}
+                    onEvent={handleSandboxEvent}
+                  />
+                ))
+              ) : (
+                <div className="flex flex-col items-center justify-center h-64 text-center">
+                  <Box className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No sandboxes yet</h3>
+                  <p className="text-sm text-muted-foreground">
+                    E2B sandboxes will appear here when agents start working
                   </p>
                 </div>
               )}

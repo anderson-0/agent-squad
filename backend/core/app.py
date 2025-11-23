@@ -97,15 +97,36 @@ try:
         execute_agent_workflow,
         execute_single_agent_workflow
     )
+    from backend.workflows.sandbox_workflows import (
+        execute_task_with_sandbox,
+        cleanup_old_sandboxes
+    )
+    from backend.workflows.hitl_workflows import (
+        handle_approval_approved,
+        handle_approval_rejected
+    )
 
     app.mount(
         "/api/inngest",
         inngest_serve(
             inngest,
-            [execute_agent_workflow, execute_single_agent_workflow],
+            [
+                execute_agent_workflow,
+                execute_single_agent_workflow,
+                execute_task_with_sandbox,
+                cleanup_old_sandboxes,
+                handle_approval_approved,
+                handle_approval_rejected,
+            ],
         ),
     )
     print("✅ Inngest workflows registered: /api/inngest")
+    print("   - execute_agent_workflow")
+    print("   - execute_single_agent_workflow")
+    print("   - execute_task_with_sandbox")
+    print("   - cleanup_old_sandboxes")
+    print("   - handle_approval_approved")
+    print("   - handle_approval_rejected")
 except ImportError:
     print("⚠️  Inngest not available - install with: pip install inngest")
 

@@ -46,7 +46,7 @@ celery==5.3.4
 # Logging & Monitoring
 structlog==23.2.0
 prometheus-client==0.19.0
-rich==13.7.0  # CLI visualization for metrics dashboard
+rich>=13.9.4  # CLI visualization for metrics dashboard
 
 # Testing
 pytest==7.4.3

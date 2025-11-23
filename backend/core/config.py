@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     CACHE_METRICS_ENABLED: bool = True  # Track cache performance metrics
     CACHE_METRICS_WINDOW: int = 3600  # Track metrics for last 1 hour
 
+    # SSE Configuration
+    SSE_QUEUE_SIZE: int = Field(default=1000, ge=100, le=10000)  # SSE queue size per connection
+    SSE_HEARTBEAT_INTERVAL: int = Field(default=15, ge=10, le=120)  # Heartbeat interval in seconds
+
     # Security
     SECRET_KEY: str = Field(..., env="SECRET_KEY")
     ALGORITHM: str = "HS256"

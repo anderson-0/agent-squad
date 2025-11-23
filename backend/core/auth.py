@@ -3,6 +3,7 @@ Authentication dependencies for FastAPI routes
 """
 from typing import Optional
 from uuid import UUID
+import logging
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -13,9 +14,20 @@ from backend.core.database import get_db
 from backend.core.security import verify_token
 from backend.models.user import User
 
+logger = logging.getLogger(__name__)
+
 
 # HTTP Bearer token scheme
 security = HTTPBearer()
+
+
+# Plan tier hierarchy for access control
+TIER_HIERARCHY = {
+    "free": 0,
+    "starter": 1,
+    "pro": 2,
+    "enterprise": 3
+}
 
 
 async def get_current_user(
@@ -68,7 +80,17 @@ async def get_current_user(
     # Convert to UUID
     try:
         user_id = UUID(user_id_str)
-    except (ValueError, AttributeError):
+    except (ValueError, AttributeError) as e:
+        logger.warning(
+            "Invalid user ID format in JWT token",
+            extra={
+                "user_id_prefix": user_id_str[:8] if user_id_str and len(user_id_str) > 8 else user_id_str,
+                "token_prefix": token[:16] + "..." if len(token) > 16 else token,
+                "error_type": type(e).__name__,
+                "error": str(e)
+            },
+            exc_info=False  # Don't need full stack trace for invalid UUIDs
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid user ID in token",
@@ -155,29 +177,51 @@ def require_plan_tier(required_tier: str):
             ...
 
     Args:
-        required_tier: Minimum plan tier required (starter, pro, enterprise)
+        required_tier: Minimum plan tier required (free, starter, pro, enterprise)
 
     Returns:
         Dependency function that checks user's plan tier
+
+    Raises:
+        ValueError: If required_tier is not a valid tier
     """
-    tier_hierarchy = {
-        "starter": 0,
-        "pro": 1,
-        "enterprise": 2
-    }
+    # Validate required tier at dependency creation time
+    if required_tier not in TIER_HIERARCHY:
+        raise ValueError(
+            f"Unknown plan tier: '{required_tier}'. "
+            f"Valid tiers: {', '.join(TIER_HIERARCHY.keys())}"
+        )
 
     async def check_plan_tier(
         current_user: User = Depends(get_current_user)
     ) -> User:
         """Check if user's plan tier meets the requirement"""
-        user_tier_level = tier_hierarchy.get(current_user.plan_tier, -1)
-        required_tier_level = tier_hierarchy.get(required_tier, 999)
+        # Default to free tier if user has no tier set
+        user_tier = current_user.plan_tier or "free"
+
+        # Validate user tier from database
+        if user_tier not in TIER_HIERARCHY:
+            logger.error(
+                f"Invalid user plan tier in database: {user_tier}",
+                extra={
+                    "user_id": str(current_user.id),
+                    "invalid_tier": user_tier,
+                    "valid_tiers": list(TIER_HIERARCHY.keys())
+                }
+            )
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Invalid user plan configuration. Please contact support."
+            )
+
+        user_tier_level = TIER_HIERARCHY[user_tier]
+        required_tier_level = TIER_HIERARCHY[required_tier]
 
         if user_tier_level < required_tier_level:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"This feature requires {required_tier} plan or higher. "
-                       f"Your current plan: {current_user.plan_tier}"
+                       f"Your current plan: {user_tier}"
             )
 
         return current_user
@@ -208,10 +252,18 @@ async def get_optional_user(
         payload = verify_token(token)
 
         if not payload or payload.get("type") != "access":
+            logger.debug(
+                "Optional auth failed: Invalid or non-access token",
+                extra={"reason": "invalid_token_type"}
+            )
             return None
 
         user_id_str = payload.get("sub")
         if not user_id_str:
+            logger.debug(
+                "Optional auth failed: Missing user ID in token",
+                extra={"reason": "missing_sub"}
+            )
             return None
 
         user_id = UUID(user_id_str)
@@ -220,10 +272,32 @@ async def get_optional_user(
         )
         user = result.scalar_one_or_none()
 
-        if user and user.is_active:
-            return user
+        if not user:
+            logger.warning(
+                f"Optional auth failed: User not found for ID {user_id}",
+                extra={"user_id": str(user_id), "reason": "user_not_found"}
+            )
+            return None
 
-    except (ValueError, AttributeError):
-        pass
+        if not user.is_active:
+            logger.warning(
+                f"Optional auth failed: User {user_id} is inactive",
+                extra={"user_id": str(user_id), "reason": "user_inactive"}
+            )
+            return None
+
+        return user
+
+    except (ValueError, AttributeError) as e:
+        logger.debug(
+            f"Optional auth failed: Invalid token format - {e}",
+            extra={"error": str(e), "reason": "invalid_format"}
+        )
+    except Exception as e:
+        logger.error(
+            f"Unexpected error in optional auth: {e}",
+            extra={"error": str(e), "reason": "unexpected_error"},
+            exc_info=True
+        )
 
     return None

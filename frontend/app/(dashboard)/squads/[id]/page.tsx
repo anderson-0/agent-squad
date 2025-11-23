@@ -18,10 +18,13 @@ import {
   Settings,
   Plus,
   Target,
+  Play,
+  Pause,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { axiosInstance } from '@/lib/axios';
 import { KanbanBoard } from '@/components/squads/KanbanBoard';
 import { AgentAvatar } from '@/components/squads/AgentAvatar';
 import { CreateTaskModal } from '@/components/squads/CreateTaskModal';
@@ -41,6 +44,7 @@ export default function SquadDetailPage({
   const [createTaskStatus, setCreateTaskStatus] = useState<TaskStatus>('pending');
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [isCreateAgentModalOpen, setIsCreateAgentModalOpen] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
 
   const squad = getSquadById(id);
 
@@ -60,6 +64,24 @@ export default function SquadDetailPage({
       </div>
     );
   }
+
+  const handlePause = async () => {
+    try {
+      await axiosInstance.post(`/squads/${id}/pause`);
+      setIsPaused(true);
+    } catch (error) {
+      console.error("Failed to pause squad:", error);
+    }
+  };
+
+  const handleResume = async () => {
+    try {
+      await axiosInstance.post(`/squads/${id}/resume`);
+      setIsPaused(false);
+    } catch (error) {
+      console.error("Failed to resume squad:", error);
+    }
+  };
 
   const handleTaskUpdate = (taskId: string, status: TaskStatus, feedback?: string) => {
     console.log(`Task ${taskId} moved to ${status}`, feedback ? `with feedback: ${feedback}` : '');
@@ -85,13 +107,13 @@ export default function SquadDetailPage({
     setSelectedAgent(agent);
   };
 
-  const handleAgentUpdate = (agentId: string, updates: any) => {
+  const handleAgentUpdate = (agentId: string, updates: Partial<Agent>) => {
     console.log(`Updating agent ${agentId}:`, updates);
     // In real implementation, call API
     setSelectedAgent(null);
   };
 
-  const handleCreateAgent = (agentData: any) => {
+  const handleCreateAgent = (agentData: Omit<Agent, 'id' | 'stats'>) => {
     // Mock subscription check
     if (squad && squad.agents.length >= 5) {
       alert("Subscription limit reached! Upgrade to Pro to add more agents.");
@@ -149,6 +171,27 @@ export default function SquadDetailPage({
           </div>
 
           <div className="flex gap-2">
+            {isPaused ? (
+              <Button
+                variant="default"
+                size="sm"
+                className="gap-2 bg-green-600 hover:bg-green-700"
+                onClick={handleResume}
+              >
+                <Play className="h-4 w-4" />
+                Resume Squad
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 text-yellow-600 border-yellow-200 hover:bg-yellow-50"
+                onClick={handlePause}
+              >
+                <Pause className="h-4 w-4" />
+                Pause Squad
+              </Button>
+            )}
             <Button variant="outline" size="sm" className="gap-2" onClick={handleSettings}>
               <Settings className="h-4 w-4" />
               Settings
@@ -159,6 +202,17 @@ export default function SquadDetailPage({
             </Button>
           </div>
         </div>
+
+        {/* Paused Banner */}
+        {isPaused && (
+          <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-md flex items-center gap-2 mb-6">
+            <Pause className="h-5 w-5" />
+            <div>
+              <p className="font-medium">Squad is Paused</p>
+              <p className="text-sm opacity-90">Agents will not pick up new tasks until resumed.</p>
+            </div>
+          </div>
+        )}
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

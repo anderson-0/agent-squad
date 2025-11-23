@@ -7,7 +7,7 @@ from typing import Optional, List
 from pydantic import BaseModel
 from uuid import UUID
 
-from backend.api.deps import get_db
+from backend.core.database import get_db
 from backend.services.sandbox_service import SandboxService
 from backend.models.sandbox import SandboxStatus
 
@@ -153,5 +153,68 @@ async def create_pr(
             request.repo_owner_name
         )
         return pr
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Inngest Workflow Integration
+
+class SandboxWorkflowRequest(BaseModel):
+    task_id: UUID
+    agent_id: UUID
+    repo_url: str
+    branch_name: str
+    base_branch: str = "main"
+    pr_title: str
+    pr_body: str
+    commit_message: str
+
+@router.post("/workflows/execute")
+async def execute_sandbox_workflow(
+    request: SandboxWorkflowRequest
+):
+    """
+    Execute complete sandbox workflow in background using Inngest.
+
+    This endpoint triggers an Inngest workflow that:
+    1. Creates E2B sandbox
+    2. Clones repository
+    3. Creates feature branch
+    4. Commits changes (after agent completes work)
+    5. Pushes to remote
+    6. Creates Pull Request
+    7. Terminates sandbox
+
+    Returns immediately with workflow ID while execution happens in background.
+    """
+    try:
+        from backend.core.inngest import inngest
+
+        # Trigger Inngest workflow
+        event_id = await inngest.send(
+            event={
+                "name": "sandbox/task.execute",
+                "data": {
+                    "task_id": str(request.task_id),
+                    "agent_id": str(request.agent_id),
+                    "repo_url": request.repo_url,
+                    "branch_name": request.branch_name,
+                    "base_branch": request.base_branch,
+                    "pr_title": request.pr_title,
+                    "pr_body": request.pr_body,
+                    "commit_message": request.commit_message
+                }
+            }
+        )
+
+        return {
+            "status": "workflow_started",
+            "event_id": event_id,
+            "message": "Sandbox workflow executing in background"
+        }
+    except ImportError:
+        raise HTTPException(
+            status_code=503,
+            detail="Inngest not available - install with: pip install inngest"
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

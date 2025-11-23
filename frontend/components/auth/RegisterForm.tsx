@@ -23,6 +23,7 @@ import { Input } from '@/components/ui/input';
 import { authApi } from '@/lib/api/auth';
 import { useAuthStore } from '@/lib/store/auth';
 import type { RegisterRequest } from '@/types/auth';
+import { getErrorMessage } from '@/lib/axios';
 
 const registerSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -122,12 +123,12 @@ export function RegisterForm() {
       });
       router.push('/');
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       setShouldShake(true);
       setTimeout(() => setShouldShake(false), 400);
 
-      const message =
-        error.response?.data?.detail || 'Failed to create account. Please try again.';
+      // Use typed error handling
+      const message = getErrorMessage(error, 'Failed to create account. Please try again.');
       toast.error('Registration failed', {
         description: message,
       });

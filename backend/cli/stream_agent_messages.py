@@ -231,7 +231,9 @@ class AgentStreamCLI:
         try:
             dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
             time_str = dt.strftime("%H:%M:%S")
-        except:
+        except (ValueError, AttributeError, TypeError) as e:
+            # Handle invalid timestamp formats
+            logger.debug(f"Failed to parse timestamp '{timestamp}': {e}")
             time_str = timestamp[:8] if timestamp else "??:??:??"
 
         # Create header
@@ -427,8 +429,8 @@ class AgentStreamCLI:
                         data = json.loads(event.data)
                         msg = data.get("message", "Connected")
                         self.console.print(f"[dim]{msg}[/dim]")
-                    except:
-                        pass
+                    except (json.JSONDecodeError, KeyError, TypeError) as e:
+                        logger.debug(f"Failed to parse connection message: {e}")
                     continue
 
                 if event.event == "message":
@@ -467,7 +469,8 @@ class AgentStreamCLI:
                     try:
                         error_data = json.loads(event.data)
                         self.console.print(f"[red]Error: {error_data.get('error', 'Unknown error')}[/red]")
-                    except:
+                    except (json.JSONDecodeError, KeyError, TypeError) as e:
+                        logger.debug(f"Failed to parse error event: {e}")
                         self.console.print(f"[red]Error event received[/red]")
 
         except KeyboardInterrupt:

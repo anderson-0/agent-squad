@@ -2,7 +2,7 @@
 Sandbox Model
 """
 from enum import Enum
-from sqlalchemy import Column, String, ForeignKey, DateTime, Enum as SAEnum
+from sqlalchemy import Column, String, ForeignKey, DateTime, Integer, Enum as SAEnum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 import uuid
@@ -23,6 +23,7 @@ class Sandbox(Base, TimestampMixin):
     agent_id = Column(UUID(as_uuid=True), nullable=True)  # Can be linked to an agent
     task_id = Column(UUID(as_uuid=True), nullable=True)   # Can be linked to a task
     repo_url = Column(String, nullable=True)
+    pr_number = Column(Integer, nullable=True, index=True)  # GitHub PR number for webhook lookup
     status = Column(SAEnum(SandboxStatus), default=SandboxStatus.CREATED, nullable=False)
     last_used_at = Column(DateTime, server_default=func.now(), nullable=False)
 

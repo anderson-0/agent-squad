@@ -14,7 +14,10 @@ export function ChatInterface({ squadId }: ChatInterfaceProps) {
         conversations,
         activeConversationId,
         setActiveConversationId,
+        agents,
         isConnected,
+        isLoading,
+        error,
         streamingMessage,
         fetchConversationDetails
     } = useChat(squadId);
@@ -26,15 +29,29 @@ export function ChatInterface({ squadId }: ChatInterfaceProps) {
         }
     }, [activeConversationId, fetchConversationDetails]);
 
-    // Mock agents for now (since we don't have a full agent fetcher yet)
-    // In a real app, we'd fetch squad members
-    const mockAgents = {
-        'agent-1': { id: 'agent-1', role: 'Product Manager', name: 'Sarah', avatar: '' },
-        'agent-2': { id: 'agent-2', role: 'Backend Dev', name: 'Mike', avatar: '' },
-        'agent-3': { id: 'agent-3', role: 'Tech Lead', name: 'Alex', avatar: '' },
-    };
-
     const activeConversation = conversations.find(c => c.id === activeConversationId);
+
+    if (isLoading) {
+        return (
+            <Card className="flex h-[calc(100vh-10rem)] w-full items-center justify-center border shadow-sm">
+                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                    <p>Loading conversations...</p>
+                </div>
+            </Card>
+        );
+    }
+
+    if (error) {
+        return (
+            <Card className="flex h-[calc(100vh-10rem)] w-full items-center justify-center border shadow-sm">
+                <div className="flex flex-col items-center gap-2 text-destructive">
+                    <p className="font-medium">Failed to load chat</p>
+                    <p className="text-sm text-muted-foreground">{error}</p>
+                </div>
+            </Card>
+        );
+    }
 
     return (
         <Card className="flex h-[calc(100vh-10rem)] w-full overflow-hidden border shadow-sm">
@@ -42,6 +59,7 @@ export function ChatInterface({ squadId }: ChatInterfaceProps) {
                 conversations={conversations}
                 activeId={activeConversationId}
                 onSelect={setActiveConversationId}
+                agents={agents}
             />
 
             <div className="flex flex-1 flex-col bg-background">
@@ -60,11 +78,18 @@ export function ChatInterface({ squadId }: ChatInterfaceProps) {
                     <MessageList
                         messages={activeConversation.messages}
                         streamingMessage={streamingMessage}
-                        agents={mockAgents}
+                        agents={agents}
                     />
                 ) : (
                     <div className="flex flex-1 items-center justify-center text-muted-foreground">
-                        Select a conversation to view details
+                        {conversations.length === 0 ? (
+                            <div className="flex flex-col items-center gap-2">
+                                <p className="font-medium">No conversations yet</p>
+                                <p className="text-sm">Agents will appear here when they start collaborating</p>
+                            </div>
+                        ) : (
+                            'Select a conversation to view details'
+                        )}
                     </div>
                 )}
             </div>

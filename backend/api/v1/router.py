@@ -29,7 +29,10 @@ from backend.api.v1.endpoints import (
     agent_pool,  # Phase 2 optimization - Agent pool monitoring
     cache_metrics,  # Phase 3A - Cache performance metrics
     task_monitoring,  # Phase 3A - Task lifecycle monitoring for TTL optimization
+    task_monitoring,  # Phase 3A - Task lifecycle monitoring for TTL optimization
     sandbox,  # E2B Sandbox integration
+    hitl,  # Human-in-the-Loop
+    webhooks,  # GitHub webhooks for PR status updates
 )
 
 
@@ -64,9 +67,10 @@ api_router.include_router(agent_pool.router, tags=["agent-pool"])  # Phase 2 opt
 api_router.include_router(cache_metrics.router, tags=["cache-metrics"])  # Phase 3A optimization
 api_router.include_router(task_monitoring.router, tags=["task-monitoring"])  # Phase 3A optimization
 api_router.include_router(sandbox.router, prefix="/sandboxes", tags=["sandboxes"])
+api_router.include_router(hitl.router, tags=["hitl"])
+api_router.include_router(webhooks.router, tags=["webhooks"])
 
 # Future routers will be added here:
 # api_router.include_router(projects.router)
 # api_router.include_router(subscriptions.router)
 # api_router.include_router(organizations.router)
-# api_router.include_router(webhooks.router)
