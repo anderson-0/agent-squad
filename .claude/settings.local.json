@@ -21,7 +21,10 @@
       "Bash(source:*)",
       "Bash(ollama list:*)",
       "Bash(curl http://localhost:11434/api/tags)",
-      "SlashCommand(/plan:hard:*)"
+      "SlashCommand(/plan:hard:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:ido-levi.github.io)",
+      "WebFetch(domain:news.ycombinator.com)"
     ],
     "deny": [],
     "ask": []

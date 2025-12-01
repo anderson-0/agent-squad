@@ -1,439 +1,324 @@
-# Agent-Squad vs Hephaestus: Competitive Comparison
+# Agent-Squad vs Hephaestus: Competitive Analysis
 
-**Last Updated:** 2025-01-XX  
-**Comparison Basis:** Hephaestus Framework Analysis
+**Last Updated:** 2025-12-01
+**Sources:** [Hephaestus GitHub](https://github.com/Ido-Levi/Hephaestus), [Official Docs](https://ido-levi.github.io/Hephaestus/)
 
 ---
 
 ## Executive Summary
 
-Agent-Squad implements the core innovation of Hephaestus (semi-structured, discovery-driven workflows) while adding production-ready infrastructure, intelligent monitoring, and comprehensive integration capabilities. This comparison analyzes feature parity, advantages, and unique value propositions.
+Hephaestus is an open-source semi-structured agentic framework (1k+ GitHub stars) focused on autonomous task discovery. Agent-Squad shares the same core philosophy but takes a different architectural approach with production-grade infrastructure. This document provides an honest technical comparison.
 
 ---
 
-## 🎯 Core Philosophy Comparison
+## What is Hephaestus?
+
+Hephaestus is a **semi-structured agentic framework** where "workflows build themselves as agents discover what needs to be done, not what you predicted upfront."
+
+**Key Innovation:** Agents dynamically spawn tasks across phases based on real-time discoveries rather than predefined branching logic.
+
+**Tech Stack:**
+- Python 3.10+ (76.5% of codebase)
+- TypeScript (22.6% - UI layer)
+- Qdrant vector database (Docker)
+- tmux for agent isolation
+- Git worktrees for code isolation
+- Claude Code / OpenCode / Droid as agent runtime
+
+**License:** AGPL-3.0
+
+---
+
+## Core Philosophy Comparison
 
 | Aspect | Hephaestus | Agent-Squad |
 |--------|-----------|-------------|
-| **Workflow Style** | Semi-structured, discovery-driven | ✅ Semi-structured, discovery-driven |
-| **Task Creation** | Dynamic, agent-driven | ✅ Dynamic, agent-driven |
-| **Phase System** | Investigation → Building → Validation | ✅ Investigation → Building → Validation |
-| **Discovery Focus** | Core innovation | ✅ Core innovation (enhanced with ML) |
+| **Workflow Style** | Semi-structured, discovery-driven | Semi-structured, discovery-driven |
+| **Task Creation** | Dynamic, agent-driven | Dynamic, agent-driven |
+| **Phase System** | Analysis → Building → Validation | Investigation → Building → Validation |
+| **Agent Runtime** | Claude Code / external CLI tools | Built-in Agno framework |
+| **Coordination** | Git worktrees + Kanban tickets | NATS message bus + PostgreSQL |
 
-**Verdict:** ✅ **Parity** - Agent-Squad implements the same core philosophy
-
----
-
-## 🏗️ Architecture Comparison
-
-### Workflow Engine
-
-| Feature | Hephaestus | Agent-Squad | Advantage |
-|---------|-----------|-------------|-----------|
-| **Phase System** | 3 phases | ✅ 3 phases | Parity |
-| **Dynamic Tasks** | Agents spawn tasks | ✅ Agents spawn tasks | Parity |
-| **Task Dependencies** | Supported | ✅ Supported (optimized) | Agent-Squad |
-| **Branching** | Discovery-driven branches | ✅ Discovery-driven branches | Parity |
-| **Real-time Updates** | Not specified | ✅ SSE streaming | **Agent-Squad** |
-
-**Verdict:** ✅ **Parity** with real-time advantage
-
-### Discovery System
-
-| Feature | Hephaestus | Agent-Squad | Advantage |
-|---------|-----------|-------------|-----------|
-| **Pattern Detection** | Basic | ✅ Advanced pattern matching | Agent-Squad |
-| **Value Scoring** | Basic heuristics | ✅ ML-enhanced scoring | **Agent-Squad** |
-| **Context Analysis** | Agent messages | ✅ Messages + work output + tasks | **Agent-Squad** |
-| **Task Suggestions** | From discoveries | ✅ Enhanced with intelligence | **Agent-Squad** |
-
-**Verdict:** 🟢 **Agent-Squad Advantage** - More sophisticated discovery
-
-### Monitoring & Validation
-
-| Feature | Hephaestus | Agent-Squad | Advantage |
-|---------|-----------|-------------|-----------|
-| **Guardian System** | Separate Guardian | ✅ PM-as-Guardian (integrated) | **Agent-Squad** |
-| **Coherence Tracking** | Phase alignment | ✅ Multi-metric coherence | **Agent-Squad** |
-| **Anomaly Detection** | Basic | ✅ Advanced (5+ types) | **Agent-Squad** |
-| **Recommendations** | Not specified | ✅ Actionable recommendations | **Agent-Squad** |
-| **Health Monitoring** | Basic metrics | ✅ Comprehensive health scores | **Agent-Squad** |
-
-**Verdict:** 🟢 **Agent-Squad Advantage** - More sophisticated monitoring
+**Verdict:** Same philosophy, different implementation approaches.
 
 ---
 
-## 💡 Feature Comparison Matrix
+## Architecture Comparison
 
-### Core Workflow Features
+### Hephaestus Architecture
 
-| Feature | Hephaestus | Agent-Squad | Status |
-|---------|-----------|-------------|--------|
-| Phase-based workflows | ✅ | ✅ | ✅ Parity |
-| Dynamic task spawning | ✅ | ✅ | ✅ Parity |
-| Workflow branching | ✅ | ✅ | ✅ Parity |
-| Discovery-driven execution | ✅ | ✅ | ✅ Parity |
-| Task dependencies | ✅ | ✅ | ✅ Parity |
+```
+┌─────────────────────────────────────────────────┐
+│                  Hephaestus Core                │
+├─────────────────────────────────────────────────┤
+│  Guardian        │  Kanban Tickets  │  Phases   │
+│  (Coherence)     │  (Coordination)  │  (3 types)│
+├─────────────────────────────────────────────────┤
+│           Agent Runtime (Claude Code)           │
+├─────────────────────────────────────────────────┤
+│  tmux Sessions   │  Git Worktrees   │  MCP      │
+├─────────────────────────────────────────────────┤
+│              Qdrant Vector DB                   │
+└─────────────────────────────────────────────────┘
+```
 
-### Advanced Features
+### Agent-Squad Architecture
 
-| Feature | Hephaestus | Agent-Squad | Status |
-|---------|-----------|-------------|--------|
-| ML-based detection | ⚠️ Not specified | ✅ Full implementation | 🟢 Agent-Squad |
-| Workflow intelligence | ⚠️ Not specified | ✅ Suggestions + predictions | 🟢 Agent-Squad |
-| Real-time Kanban | ⚠️ Not specified | ✅ Auto-generated | 🟢 Agent-Squad |
-| MCP integration | ⚠️ Not specified | ✅ Full MCP server | 🟢 Agent-Squad |
-| Analytics dashboard | ⚠️ Not specified | ✅ Comprehensive | 🟢 Agent-Squad |
-
-### Infrastructure
-
-| Feature | Hephaestus | Agent-Squad | Status |
-|---------|-----------|-------------|--------|
-| Production DB | ⚠️ Not specified | ✅ PostgreSQL (async) | 🟢 Agent-Squad |
-| Message bus | ⚠️ Not specified | ✅ NATS JetStream | 🟢 Agent-Squad |
-| Real-time updates | ⚠️ Not specified | ✅ SSE streaming | 🟢 Agent-Squad |
-| Caching layer | ⚠️ Not specified | ✅ Redis | 🟢 Agent-Squad |
-| Task queue | ⚠️ Not specified | ✅ Celery | 🟢 Agent-Squad |
-| Vector search | ⚠️ Not specified | ✅ Pinecone RAG | 🟢 Agent-Squad |
-
----
-
-## 📊 Detailed Feature Comparison
-
-### 1. Discovery System
-
-#### Hephaestus
-- Pattern-based discovery
-- Basic value assessment
-- Discovery → task suggestions
-
-#### Agent-Squad
-- ✅ **Pattern-based discovery** (DiscoveryDetector)
-- ✅ **ML-enhanced detection** (OpportunityDetector)
-- ✅ **Advanced value scoring** (DiscoveryEngine)
-- ✅ **Context-aware analysis** (WorkContext)
-- ✅ **Task suggestions with priorities** (TaskSuggestion)
-- ✅ **Historical pattern learning** (training infrastructure)
-
-**Advantage:** 🟢 **Agent-Squad** - More sophisticated and extensible
+```
+┌─────────────────────────────────────────────────┐
+│                 Agent-Squad Core                │
+├─────────────────────────────────────────────────┤
+│  PM-as-Guardian  │  Task Engine     │  Phases   │
+│  (Orchestration) │  (Dependencies)  │  (3 types)│
+├─────────────────────────────────────────────────┤
+│           Agno Framework (Built-in)             │
+├─────────────────────────────────────────────────┤
+│  NATS JetStream  │  PostgreSQL      │  Redis    │
+├─────────────────────────────────────────────────┤
+│  Pinecone RAG    │  Celery Queue    │  SSE      │
+└─────────────────────────────────────────────────┘
+```
 
 ---
 
-### 2. Guardian/Monitoring System
+## Feature-by-Feature Comparison
 
-#### Hephaestus
-- Separate Guardian agent
-- Phase coherence tracking
-- Basic validation
+### 1. Phase System
 
-#### Agent-Squad
-- ✅ **PM-as-Guardian** (integrated approach)
-- ✅ **Multi-metric coherence** (phase, goal, quality, task relevance)
-- ✅ **Workflow health monitoring** (6+ metrics)
-- ✅ **Advanced anomaly detection** (phase drift, stagnation, imbalance)
-- ✅ **Actionable recommendations** (prioritized)
-- ✅ **Coherence trend tracking** (historical analysis)
+| Feature | Hephaestus | Agent-Squad |
+|---------|-----------|-------------|
+| Phase 1 | Analysis (understand, plan) | Investigation (same) |
+| Phase 2 | Implementation (build, fix) | Building (same) |
+| Phase 3 | Validation (test, verify) | Validation (same) |
+| Cross-phase spawning | ✅ Yes | ✅ Yes |
+| Phase customization | ✅ Configurable | ✅ Configurable |
 
-**Advantage:** 🟢 **Agent-Squad** - More comprehensive and integrated
+**Verdict:** ✅ Parity
 
-**Why PM-as-Guardian is Better:**
-- Single source of truth for orchestration
-- Integrated monitoring and validation
-- Reduced complexity (one agent vs two)
-- Better coordination
+### 2. Guardian / Monitoring System
 
----
+| Feature | Hephaestus | Agent-Squad |
+|---------|-----------|-------------|
+| **Coherence tracking** | ✅ LLM-powered trajectory analysis | ✅ Multi-metric coherence scores |
+| **Intervention** | ✅ Targeted interventions | ✅ Recommendations + auto-actions |
+| **Scope** | Conversation trajectories | Messages + tasks + work output |
+| **Anomaly detection** | Basic stuck detection | Advanced (5+ anomaly types) |
+| **Historical trends** | Not specified | ✅ Trend analysis over time |
 
-### 3. Workflow Intelligence
+**Hephaestus Advantage:** LLM-powered coherence scoring on full conversation trajectories is sophisticated.
 
-#### Hephaestus
-- ⚠️ Not explicitly mentioned
-- Likely basic task suggestions
+**Agent-Squad Advantage:** Multi-metric approach (phase, goal, quality, task relevance) with historical tracking.
 
-#### Agent-Squad
-- ✅ **Task suggestions** (multi-source intelligence)
-- ✅ **Outcome predictions** (completion time, success probability)
-- ✅ **Task ordering optimization** (topological sort with priorities)
-- ✅ **Risk factor identification**
-- ✅ **Confidence scoring**
+**Verdict:** Different approaches, both valid. Hephaestus more focused, Agent-Squad more comprehensive.
 
-**Advantage:** 🟢 **Agent-Squad** - Comprehensive intelligence layer
+### 3. Task Coordination
 
----
+| Feature | Hephaestus | Agent-Squad |
+|---------|-----------|-------------|
+| **Coordination model** | Kanban tickets + Git worktrees | NATS message bus + DB |
+| **Dependency tracking** | ✅ Blocking relationships | ✅ Task dependencies (optimized) |
+| **Code isolation** | Git worktrees per agent | Shared codebase (DB transactions) |
+| **Conflict prevention** | Worktree isolation | Pessimistic locking |
+| **Persistence** | File-based tickets | PostgreSQL (ACID) |
 
-### 4. Workflow Branching
+**Hephaestus Advantage:** Git worktrees provide true code isolation - each agent works in separate directory.
 
-#### Hephaestus
-- Discovery-driven branching
-- Branch lifecycle management
-- Merge/abandon capabilities
+**Agent-Squad Advantage:** Production database with transactions, better for distributed deployment.
 
-#### Agent-Squad
-- ✅ **Discovery-driven branching** (BranchingEngine)
-- ✅ **Full lifecycle management** (active, merged, abandoned, completed)
-- ✅ **Branch metadata tracking**
-- ✅ **Task-to-branch linking**
-- ✅ **Branch summaries on merge**
+**Verdict:** Hephaestus better for code-heavy workflows; Agent-Squad better for general task orchestration.
 
-**Verdict:** ✅ **Parity** - Both implement branching effectively
+### 4. Agent Runtime
 
----
+| Feature | Hephaestus | Agent-Squad |
+|---------|-----------|-------------|
+| **Agent execution** | External (Claude Code, OpenCode) | Built-in (Agno framework) |
+| **Session management** | tmux terminal multiplexer | In-process sessions |
+| **Memory** | MCP context + Qdrant | Agno persistent sessions |
+| **Tool access** | MCP servers | Agno tools + MCP |
+| **Agent types** | Configurable instances | 9 predefined roles |
 
-### 5. Infrastructure & Production Readiness
+**Hephaestus Advantage:** Uses proven tools (Claude Code) with their full capabilities.
 
-#### Hephaestus
-- ⚠️ Framework description (implementation details unclear)
-- Focus on workflow concepts
+**Agent-Squad Advantage:** Tighter integration, no external dependencies for agent runtime.
 
-#### Agent-Squad
-- ✅ **Production database** (PostgreSQL with async)
-- ✅ **Message bus** (NATS JetStream)
-- ✅ **Caching** (Redis)
-- ✅ **Task queue** (Celery)
-- ✅ **Vector search** (Pinecone)
-- ✅ **Real-time updates** (SSE)
-- ✅ **Docker deployment** (Docker Compose)
-- ✅ **Migrations** (Alembic)
-- ✅ **Comprehensive API** (26+ endpoints)
+**Verdict:** Trade-off between flexibility (Hephaestus) and integration (Agent-Squad).
 
-**Advantage:** 🟢 **Agent-Squad** - Full production infrastructure
+### 5. Vector Search / RAG
 
----
+| Feature | Hephaestus | Agent-Squad |
+|---------|-----------|-------------|
+| **Vector DB** | Qdrant (self-hosted, Docker) | Pinecone (managed cloud) |
+| **Use case** | Codebase semantic search | RAG for context retrieval |
+| **Repository indexing** | ✅ Built-in workflow | Via external tools |
 
-### 6. Agent Framework
+**Hephaestus Advantage:** Self-hosted, focused on codebase indexing.
 
-#### Hephaestus
-- Agent framework (specifics unclear)
-- Multi-agent coordination
+**Agent-Squad Advantage:** Managed service, lower ops burden.
 
-#### Agent-Squad
-- ✅ **Agno Framework** (enterprise-grade)
-- ✅ **Persistent sessions** (automatic memory)
-- ✅ **Tool integration** (MCP support)
-- ✅ **9 specialized agent roles**
-- ✅ **Multi-agent coordination** (message bus)
-- ✅ **Role-based tool access**
+**Verdict:** Different deployment models.
 
-**Advantage:** 🟢 **Agent-Squad** - Production-ready agent framework
+### 6. Pre-built Workflows
 
----
+| Workflow | Hephaestus | Agent-Squad |
+|----------|-----------|-------------|
+| PRD to Software | ✅ | - |
+| Bug Fix | ✅ | - |
+| Repository Indexing | ✅ | - |
+| Feature Development | ✅ | - |
+| Documentation Generation | ✅ | - |
+| Custom Workflows | ✅ | ✅ |
 
-### 7. API & Integration
+**Hephaestus Advantage:** Ships with 5 production-ready workflows out of the box.
 
-#### Hephaestus
-- ⚠️ API details not specified
+**Agent-Squad:** More generic, requires workflow definition.
 
-#### Agent-Squad
-- ✅ **REST API** (FastAPI, auto-documented)
-- ✅ **SSE streaming** (real-time updates)
-- ✅ **MCP server** (6 tools exposed)
-- ✅ **Authentication** (JWT)
-- ✅ **Comprehensive endpoints** (26+)
+### 7. Infrastructure & Deployment
 
-**Advantage:** 🟢 **Agent-Squad** - Full API coverage
+| Feature | Hephaestus | Agent-Squad |
+|---------|-----------|-------------|
+| **Database** | Qdrant (vector only) | PostgreSQL + Redis + Pinecone |
+| **Message bus** | None (direct calls) | NATS JetStream |
+| **Real-time updates** | Not specified | SSE streaming |
+| **Task queue** | Synchronous | Celery (async) |
+| **Containerization** | Docker (Qdrant only) | Docker Compose (full stack) |
+| **API** | CLI-focused | REST API (26+ endpoints) |
+
+**Hephaestus:** Lighter weight, CLI-focused, lower infrastructure needs.
+
+**Agent-Squad:** Full production stack, API-first, higher infrastructure complexity.
 
 ---
 
-### 8. Analytics & Visualization
+## Honest Assessment
 
-#### Hephaestus
-- ⚠️ Not specified
+### Where Hephaestus Excels
 
-#### Agent-Squad
-- ✅ **Workflow analytics** (completion, performance, trends)
-- ✅ **Workflow graph** (nodes, edges, branches)
-- ✅ **Agent performance** (per-agent metrics)
-- ✅ **Coherence trends** (historical analysis)
-- ✅ **Real-time Kanban** (auto-generated)
-- ✅ **Dependency visualization**
+1. **Simplicity** - Fewer moving parts, easier to understand
+2. **Code Isolation** - Git worktrees prevent agent conflicts elegantly
+3. **Pre-built Workflows** - Ready-to-use development workflows
+4. **Claude Code Integration** - Leverages proven AI coding tool
+5. **Self-Hosted** - No cloud dependencies (except LLM APIs)
+6. **Codebase Indexing** - Built-in semantic search for repositories
 
-**Advantage:** 🟢 **Agent-Squad** - Comprehensive analytics
+### Where Agent-Squad Excels
 
----
+1. **Production Infrastructure** - Full database/queue/cache stack
+2. **API-First** - 26+ REST endpoints for integration
+3. **Real-Time** - SSE streaming for live updates
+4. **Scalability** - Designed for distributed deployment
+5. **Monitoring Depth** - Multi-metric coherence with trends
+6. **Workflow Intelligence** - ML-enhanced predictions (optional)
 
-## 🎯 Unique Value Propositions
+### Trade-offs
 
-### Agent-Squad Advantages
-
-#### 1. Production-Ready Infrastructure
-- **Full stack:** Database, message bus, cache, queue
-- **Scalable:** Horizontal scaling support
-- **Reliable:** Transaction safety, error handling
-- **Observable:** Logging, metrics, health checks
-
-#### 2. PM-as-Guardian Approach
-- **Integrated:** Single agent for orchestration + monitoring
-- **Intelligent:** Multi-metric coherence tracking
-- **Actionable:** Prioritized recommendations
-- **Historical:** Trend analysis over time
-
-#### 3. ML Enhancement
-- **Optional ML:** Works with or without ML libraries
-- **Graceful fallback:** Pattern matching always available
-- **Value prediction:** Historical data learning
-- **Model training:** On-demand training infrastructure
-
-#### 4. Comprehensive Intelligence
-- **Task suggestions:** Multi-source recommendations
-- **Outcome prediction:** Completion time, success probability
-- **Risk identification:** Proactive issue detection
-- **Optimization:** Task ordering for efficiency
-
-#### 5. MCP Integration
-- **Standard protocol:** Model Context Protocol support
-- **External tools:** Git, GitHub, Jira via MCP
-- **Capability exposure:** Our features as MCP tools
-- **Future-proof:** Compatible with MCP ecosystem
-
-#### 6. Real-Time Capabilities
-- **SSE streaming:** Live workflow updates
-- **Auto-generated Kanban:** Real-time board updates
-- **Event-driven:** NATS message bus
-- **Low latency:** Efficient real-time communication
+| Consideration | Hephaestus | Agent-Squad |
+|---------------|-----------|-------------|
+| **Setup complexity** | Moderate (tmux, Docker) | Higher (Postgres, Redis, NATS) |
+| **Learning curve** | Lower | Higher |
+| **Ops burden** | Lower | Higher |
+| **Scalability** | Single machine | Distributed |
+| **Integration options** | CLI + MCP | REST API + SSE + MCP |
+| **Code isolation** | Native (worktrees) | Requires additional work |
 
 ---
 
-### Hephaestus Advantages
+## Use Case Recommendations
 
-#### 1. Conceptual Clarity
-- **Focused:** Clear focus on discovery-driven workflows
-- **Simple:** Minimal feature set, easy to understand
-- **Academic:** Well-documented concepts
+### Choose Hephaestus When:
 
-#### 2. Framework Design
-- **Flexible:** Framework allows customization
-- **Extensible:** Easy to add features
-- **Clean:** Clear separation of concerns
+- Building software from PRDs (their primary use case)
+- Single developer / small team
+- Want minimal infrastructure
+- Claude Code is your primary AI tool
+- Need strong code isolation between agents
+- Prefer self-hosted solutions
 
----
+### Choose Agent-Squad When:
 
-## 📈 Feature Completeness Score
-
-| Category | Hephaestus | Agent-Squad | Score |
-|----------|-----------|-------------|-------|
-| **Core Workflows** | ✅ | ✅ | 100% / 100% |
-| **Discovery System** | ✅ | ✅+ | 100% / 150% |
-| **Monitoring** | ✅ | ✅+ | 100% / 200% |
-| **Intelligence** | ⚠️ | ✅ | 50% / 100% |
-| **Infrastructure** | ⚠️ | ✅ | 30% / 100% |
-| **API & Integration** | ⚠️ | ✅ | 40% / 100% |
-| **Analytics** | ⚠️ | ✅ | 20% / 100% |
-
-**Overall:** Hephaestus = **58%**, Agent-Squad = **143%**
-
-*Note: Scores are relative to core workflow features. Agent-Squad includes significantly more production features.*
+- Need API-first integration
+- Building a larger platform with multiple services
+- Real-time visibility is critical
+- Planning distributed deployment
+- Want comprehensive analytics/monitoring
+- Non-code workflows (general task orchestration)
 
 ---
 
-## 🏆 Competitive Positioning
+## Technical Requirements Comparison
 
-### Core Workflow Parity ✅
-Agent-Squad fully implements Hephaestus's core innovation:
-- ✅ Semi-structured, discovery-driven workflows
-- ✅ Phase-based execution (Investigation → Building → Validation)
-- ✅ Dynamic task spawning
-- ✅ Workflow branching
-- ✅ Discovery system
+### Hephaestus
 
-### Enhanced Features 🟢
-Agent-Squad adds significant enhancements:
-- 🟢 **Production infrastructure** (full stack)
-- 🟢 **Advanced monitoring** (PM-as-Guardian)
-- 🟢 **ML capabilities** (optional enhancement)
-- 🟢 **Workflow intelligence** (predictions, optimization)
-- 🟢 **MCP integration** (standard protocol)
-- 🟢 **Comprehensive analytics** (metrics, visualization)
-
-### Unique Advantages 🚀
-Agent-Squad offers unique value:
-- 🚀 **Production-ready** from day one
-- 🚀 **Intelligent monitoring** (not just tracking)
-- 🚀 **Integration-first** (MCP, APIs, tools)
-- 🚀 **Comprehensive observability** (analytics, graphs)
-
----
-
-## 💼 Use Case Comparison
-
-### Scenario: Building a New Feature
-
-#### Hephaestus Approach
-1. Agents start in Investigation phase
-2. Discover requirements and opportunities
-3. Spawn tasks dynamically
-4. Progress through phases
-5. Guardian monitors coherence
-
-#### Agent-Squad Approach
-1. ✅ **Same as Hephaestus** (core workflow)
-2. ✅ **Enhanced discovery** (ML + patterns)
-3. ✅ **Intelligent suggestions** (what to do next)
-4. ✅ **Predictive insights** (completion time)
-5. ✅ **Advanced monitoring** (anomaly detection)
-6. ✅ **Real-time visibility** (Kanban board)
-7. ✅ **Analytics** (performance metrics)
-
-**Result:** Agent-Squad provides the same core experience with significantly more intelligence and observability.
-
----
-
-## 🔮 Future Roadmap Comparison
-
-### Hephaestus (Inferred)
-- Framework refinement
-- Additional discovery patterns
-- Enhanced Guardian capabilities
+```
+- Python 3.10+
+- tmux
+- Git
+- Docker (for Qdrant)
+- Node.js + npm
+- Claude Code (or OpenCode/Droid)
+- API keys: OpenAI/OpenRouter/Anthropic
+```
 
 ### Agent-Squad
-- ✅ **Already implemented advanced features**
-- **Potential additions:**
-  - Advanced ML models (transformer-based)
-  - Enhanced visualization (3D graphs)
-  - More MCP servers
-  - Export functionality (PDF reports)
-  - Time-series analytics
 
-**Verdict:** Agent-Squad already includes many features that would be "future" for Hephaestus.
-
----
-
-## 🎯 Conclusion
-
-### Summary
-
-| Aspect | Verdict |
-|--------|---------|
-| **Core Innovation** | ✅ **Parity** - Both implement discovery-driven workflows |
-| **Feature Completeness** | 🟢 **Agent-Squad Advantage** - More comprehensive |
-| **Production Readiness** | 🟢 **Agent-Squad Advantage** - Full infrastructure |
-| **Intelligence** | 🟢 **Agent-Squad Advantage** - ML + predictions |
-| **Integration** | 🟢 **Agent-Squad Advantage** - MCP + comprehensive API |
-| **Monitoring** | 🟢 **Agent-Squad Advantage** - Advanced Guardian |
-
-### Final Assessment
-
-**Agent-Squad successfully implements Hephaestus's core innovation** while adding:
-- ✅ Production-ready infrastructure
-- ✅ Advanced intelligent features
-- ✅ Comprehensive monitoring
-- ✅ Standard protocol integration
-
-**Recommendation:** Agent-Squad is a **production-ready implementation** of Hephaestus principles with significant enhancements for real-world deployment.
+```
+- Python 3.10+
+- PostgreSQL
+- Redis
+- NATS Server
+- Docker + Docker Compose
+- Pinecone account (optional)
+- API keys: OpenAI/Anthropic/etc.
+```
 
 ---
 
-### Key Takeaways
+## Feature Completeness Matrix
 
-1. **✅ Core Parity:** Agent-Squad fully implements Hephaestus workflows
-2. **🟢 Enhanced Monitoring:** PM-as-Guardian is more sophisticated
-3. **🟢 Production Infrastructure:** Full stack ready for deployment
-4. **🟢 ML Capabilities:** Optional ML enhancement with graceful fallback
-5. **🟢 Comprehensive API:** 26+ endpoints for full integration
-6. **🟢 Real-Time:** SSE streaming and live updates
+| Category | Hephaestus | Agent-Squad |
+|----------|-----------|-------------|
+| Core phase system | ✅ Full | ✅ Full |
+| Dynamic task spawning | ✅ Full | ✅ Full |
+| Guardian/monitoring | ✅ LLM-based | ✅ Multi-metric |
+| Pre-built workflows | ✅ 5 workflows | ⚠️ None |
+| Code isolation | ✅ Git worktrees | ⚠️ Manual |
+| Production database | ⚠️ None | ✅ PostgreSQL |
+| Message bus | ⚠️ None | ✅ NATS |
+| REST API | ⚠️ CLI only | ✅ 26+ endpoints |
+| Real-time updates | ⚠️ Not specified | ✅ SSE |
+| Codebase indexing | ✅ Qdrant | ⚠️ External |
+| Analytics | ⚠️ Basic | ✅ Comprehensive |
 
 ---
 
-**Document Version:** 1.0  
-**Last Updated:** 2025-01-XX  
-**Maintained By:** Agent-Squad Team
+## Conclusion
 
+**Hephaestus and Agent-Squad share the same core innovation** - semi-structured, discovery-driven workflows where agents spawn tasks dynamically. They differ in:
+
+1. **Target Use Case:** Hephaestus targets software development workflows; Agent-Squad targets general task orchestration
+2. **Architecture:** Hephaestus is CLI-focused with external agents; Agent-Squad is API-first with built-in agents
+3. **Infrastructure:** Hephaestus is lightweight; Agent-Squad is production-grade
+
+Neither is objectively "better" - they optimize for different scenarios.
+
+### When Migrating from Hephaestus
+
+If moving from Hephaestus to Agent-Squad:
+- Port phase definitions (straightforward)
+- Implement worktree-like isolation if needed
+- Recreate pre-built workflows
+- Expect higher infrastructure setup
+
+### Learning from Hephaestus
+
+Features Agent-Squad could adopt:
+- Git worktree isolation pattern
+- Pre-built development workflows
+- CLI-first experience for developers
+- Qdrant integration for self-hosted RAG
+
+---
+
+**Document Version:** 2.0
+**Sources:**
+- [Hephaestus GitHub](https://github.com/Ido-Levi/Hephaestus)
+- [Hephaestus Official Docs](https://ido-levi.github.io/Hephaestus/)

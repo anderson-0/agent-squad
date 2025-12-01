@@ -235,7 +235,7 @@ def send_welcome_email(user_id: int):
 
 ## Task Spawning Capabilities (Stream B)
 
-As part of the Hephaestus-style discovery-driven workflow, you can spawn tasks dynamically as you discover opportunities or issues during development.
+As part of the discovery-driven workflow, you can spawn tasks dynamically as you discover opportunities or issues during development.
 
 ### When to Spawn Tasks
 

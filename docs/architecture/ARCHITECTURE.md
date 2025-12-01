@@ -1,7 +1,7 @@
 # Agent-Squad Architecture Documentation
 
 **Last Updated:** 2025-11-03
-**Version:** 2.1 (Hephaestus + Inngest Optimization)
+**Version:** 2.1 (discovery-driven workflows + Inngest Optimization)
 
 ---
 
@@ -22,7 +22,7 @@
 
 ## System Overview
 
-Agent-Squad is a production-ready, multi-agent AI system that enables teams of specialized AI agents to collaborate on complex software development tasks. The system implements a Hephaestus-style, discovery-driven workflow architecture that allows agents to dynamically discover, plan, and execute work.
+Agent-Squad is a production-ready, multi-agent AI system that enables teams of specialized AI agents to collaborate on complex software development tasks. The system implements a discovery-driven workflow architecture that allows agents to dynamically discover, plan, and execute work.
 
 ### Key Characteristics
 
