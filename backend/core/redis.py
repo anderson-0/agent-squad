@@ -28,6 +28,17 @@ async def get_redis() -> redis.Redis:
     """
     global redis_client
 
+    if settings.ENV == "test" or not settings.CACHE_ENABLED:
+        from unittest.mock import AsyncMock
+        mock = AsyncMock()
+        mock.ping.return_value = True
+        mock.get.return_value = None
+        mock.set.return_value = True
+        mock.delete.return_value = True
+        mock.exists.return_value = 0
+        mock.close.return_value = None
+        return mock
+
     if redis_client is None:
         try:
             logger.info(f"Connecting to Redis at {settings.REDIS_URL}")

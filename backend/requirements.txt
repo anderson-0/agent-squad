@@ -46,7 +46,7 @@ celery==5.3.4
 # Logging & Monitoring
 structlog==23.2.0
 prometheus-client==0.19.0
-rich==13.7.0  # CLI visualization for metrics dashboard
+rich>=13.9.4  # CLI visualization for metrics dashboard
 
 # Testing
 pytest==7.4.3
@@ -60,6 +60,9 @@ mcp-server-git==2025.9.25
 mcp-atlassian==0.11.9
 PyGithub==2.8.1
 GitPython==3.1.45
+
+# E2B Sandbox (Secure Code Execution)
+e2b-code-interpreter==1.0.4
 
 # Development
 black==23.12.0

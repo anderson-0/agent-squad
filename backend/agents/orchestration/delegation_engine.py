@@ -53,13 +53,39 @@ class DelegationEngine:
 
         Returns:
             Dictionary with task requirements
+
+        Raises:
+            ValueError: If task is missing required fields or has only whitespace
         """
-        title = task.get("title", "").lower()
-        description = task.get("description", "").lower()
+        # Validate task has required fields with meaningful content
+        title = task.get("title", "").strip()
+        description = task.get("description", "").strip()
+
+        if not title and not description:
+            raise ValueError(
+                "Task must have either a non-empty title or description. "
+                "Cannot delegate task with no meaningful content."
+            )
+
+        if title and len(title) < 3:
+            raise ValueError(
+                f"Task title too short: '{title}'. "
+                "Title must be at least 3 characters."
+            )
+
+        if description and len(description) < 10:
+            raise ValueError(
+                f"Task description too short (length: {len(description)}). "
+                "Description must be at least 10 characters if provided."
+            )
+
+        # Convert to lowercase for analysis
+        title_lower = title.lower()
+        description_lower = description.lower()
         acceptance_criteria = [c.lower() for c in task.get("acceptance_criteria", [])]
 
         # Combine all text for analysis
-        full_text = f"{title} {description} {' '.join(acceptance_criteria)}"
+        full_text = f"{title_lower} {description_lower} {' '.join(acceptance_criteria)}"
 
         # Detect task type based on keywords
         task_type = self._detect_task_type(full_text)

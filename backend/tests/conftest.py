@@ -15,18 +15,33 @@ from backend.core.database import get_db
 from backend.models.base import Base
 
 
-# Test database URL - use postgres hostname when running in Docker
+# Test database URL - use SQLite for tests to avoid network dependencies
 import os
+from sqlalchemy.pool import StaticPool
+
 TEST_DATABASE_URL = os.getenv(
-    "TEST_DATABASE_URL",
-    "postgresql+asyncpg://postgres:postgres@postgres:5432/agent_squad_test"
+    "DATABASE_URL",  # Use same DATABASE_URL from .env (SQLite for tests)
+    "sqlite+aiosqlite:///./test.db"
 )
+
+# Determine engine arguments based on database type
+is_sqlite = "sqlite" in TEST_DATABASE_URL
+engine_kwargs = {
+    "echo": False
+}
+
+if is_sqlite:
+    engine_kwargs.update({
+        "poolclass": StaticPool,
+        "connect_args": {"check_same_thread": False}
+    })
+else:
+    engine_kwargs["poolclass"] = NullPool
 
 # Create test engine
 test_engine = create_async_engine(
     TEST_DATABASE_URL,
-    poolclass=NullPool,
-    echo=False
+    **engine_kwargs
 )
 
 # Create test session maker

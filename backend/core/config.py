@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     CACHE_METRICS_ENABLED: bool = True  # Track cache performance metrics
     CACHE_METRICS_WINDOW: int = 3600  # Track metrics for last 1 hour
 
+    # SSE Configuration
+    SSE_QUEUE_SIZE: int = Field(default=1000, ge=100, le=10000)  # SSE queue size per connection
+    SSE_HEARTBEAT_INTERVAL: int = Field(default=15, ge=10, le=120)  # Heartbeat interval in seconds
+
     # Security
     SECRET_KEY: str = Field(..., env="SECRET_KEY")
     ALGORITHM: str = "HS256"
@@ -81,6 +85,12 @@ class Settings(BaseSettings):
 
     # E2B Sandbox (for secure code execution)
     E2B_API_KEY: str = Field(default="", env="E2B_API_KEY")
+
+    # Git Sandbox Configuration (E2B-based git operations)
+    GIT_SANDBOX_TIMEOUT: int = 300  # 5 minutes
+    GIT_SANDBOX_MAX_RETRIES: int = 3  # Max retry attempts for push
+    GIT_SANDBOX_TTL: int = 3600  # 1 hour sandbox TTL
+    GITHUB_DEFAULT_BRANCH: str = "main"  # Default branch for operations
 
     # Pinecone (optional for development)
     PINECONE_API_KEY: str = Field(default="", env="PINECONE_API_KEY")

@@ -9,7 +9,7 @@ Architecture Patterns:
 - Factory Pattern: Database creation based on environment
 - Configuration Pattern: Centralized config management
 """
-from typing import Optional
+from typing import Optional, Any
 import logging
 from functools import lru_cache
 
@@ -61,7 +61,7 @@ class AgnoConfig:
             logger.info("Agno database instance created")
         return self._db
 
-    def _create_database(self) -> PostgresDb:
+    def _create_database(self) -> Any:
         """
         Create Agno database instance based on configuration.
 
@@ -71,6 +71,15 @@ class AgnoConfig:
         Design Pattern: Factory Method
         """
         try:
+            if "sqlite" in settings.DATABASE_URL:
+                from agno.db.sqlite import SqliteDb
+                db = SqliteDb(
+                    db_url=settings.DATABASE_URL,
+                    session_table="agno_sessions"
+                )
+                logger.info("Agno SQLite database configured")
+                return db
+
             db = PostgresDb(
                 db_url=settings.DATABASE_URL,
                 # Custom table names for namespacing

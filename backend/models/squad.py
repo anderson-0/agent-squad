@@ -20,6 +20,7 @@ class Squad(Base, TimestampMixin):
     name = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     status = Column(String, nullable=False, default="active")  # active, paused, archived
+    is_paused = Column(Boolean, nullable=False, default=False)
     config = Column(JSON, nullable=False, server_default="{}")
 
     # Relationships

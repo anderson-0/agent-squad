@@ -18,14 +18,35 @@ from backend.models.base import Base
 # ============================================================================
 
 # Create async engine with asyncpg (optimized connection pool)
+from sqlalchemy.pool import StaticPool
+
+# Define engine arguments based on database type
+is_sqlite = "sqlite" in settings.DATABASE_URL
+connect_args = {"check_same_thread": False} if is_sqlite else {}
+poolclass = StaticPool if is_sqlite else None
+
+engine_args = {
+    "echo": settings.DEBUG,
+}
+
+if not is_sqlite:
+    engine_args.update({
+        "pool_pre_ping": True,
+        "pool_size": 20,
+        "max_overflow": 10,
+        "pool_timeout": 30,
+        "pool_recycle": 3600,
+    })
+else:
+    engine_args.update({
+        "poolclass": StaticPool,
+        "connect_args": connect_args,
+    })
+
+# Create async engine with asyncpg (optimized connection pool)
 async_engine = create_async_engine(
     settings.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://"),
-    pool_pre_ping=True,     # Verify connections before using them
-    pool_size=20,           # ⚡ Increased from 5 to 20 for better concurrency
-    max_overflow=10,        # Additional connections when needed
-    pool_timeout=30,        # ⚡ Wait time for connection (seconds)
-    pool_recycle=3600,      # ⚡ Recycle connections every hour to prevent stale connections
-    echo=settings.DEBUG,    # Log SQL queries in debug mode
+    **engine_args
 )
 
 # Create async sessionmaker
@@ -91,14 +112,10 @@ async def get_db_context() -> AsyncGenerator[AsyncSession, None]:
 # ============================================================================
 
 # Create sync engine (for migrations and sync operations)
+# Create sync engine (for migrations and sync operations)
 sync_engine = create_engine(
     settings.DATABASE_URL,
-    pool_pre_ping=True,
-    pool_size=20,           # ⚡ Increased from 5 to 20
-    max_overflow=10,
-    pool_timeout=30,        # ⚡ Wait time for connection
-    pool_recycle=3600,      # ⚡ Recycle connections every hour
-    echo=settings.DEBUG,
+    **engine_args
 )
 
 # Create sync sessionmaker

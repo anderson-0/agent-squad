@@ -1,0 +1,79 @@
+# Prometheus Configuration for Agent Squad
+# Scrapes metrics from backend API and MCP servers
+
+global:
+  scrape_interval: 60s       # Scrape metrics every 60 seconds (optimized for git ops)
+  evaluation_interval: 60s   # Evaluate rules every 60 seconds
+  scrape_timeout: 10s        # Timeout for scrape requests
+  external_labels:
+    cluster: 'agent-squad-dev'
+    environment: 'development'
+
+# Alertmanager configuration (optional)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets:
+#           - alertmanager:9093
+
+# Rule files (for alerting rules)
+rule_files:
+  # - "alert_rules.yml"
+
+# Scrape configurations
+scrape_configs:
+  # Backend API metrics
+  - job_name: 'backend-api'
+    static_configs:
+      - targets: ['backend:8000']
+        labels:
+          service: 'backend-api'
+          component: 'fastapi'
+    metrics_path: '/metrics'
+    scrape_interval: 60s  # Optimized for git ops (75% data reduction)
+
+  # Git Operations MCP Server metrics
+  # Note: This assumes the MCP server exposes a /metrics endpoint
+  # If running as a separate process, adjust the target accordingly
+  - job_name: 'git-operations-mcp'
+    static_configs:
+      - targets: ['backend:8001']  # Adjust port if MCP server runs separately
+        labels:
+          service: 'mcp-server'
+          component: 'git-operations'
+    metrics_path: '/metrics'
+    scrape_interval: 60s  # Optimized for git ops (75% data reduction)
+
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+          component: 'monitoring'
+
+  # NATS monitoring
+  - job_name: 'nats'
+    static_configs:
+      - targets: ['nats:8222']
+        labels:
+          service: 'nats'
+          component: 'message-bus'
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Redis metrics (if redis_exporter is added)
+  # - job_name: 'redis'
+  #   static_configs:
+  #     - targets: ['redis-exporter:9121']
+  #       labels:
+  #         service: 'redis'
+  #         component: 'cache'
+
+  # PostgreSQL metrics (if postgres_exporter is added)
+  # - job_name: 'postgres'
+  #   static_configs:
+  #     - targets: ['postgres-exporter:9187']
+  #       labels:
+  #         service: 'postgres'
+  #         component: 'database'

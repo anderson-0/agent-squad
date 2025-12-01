@@ -32,6 +32,8 @@ from backend.models.llm_cost_tracking import (
     calculate_cost,
     get_model_pricing,
 )
+from backend.models.approval_request import ApprovalRequest, ApprovalStatus
+from backend.models.sandbox import Sandbox, SandboxStatus
 
 __all__ = [
     "Base",
@@ -70,4 +72,8 @@ __all__ = [
     "LLMProviderEnum",
     "calculate_cost",
     "get_model_pricing",
+    "ApprovalRequest",
+    "ApprovalStatus",
+    "Sandbox",
+    "SandboxStatus",
 ]

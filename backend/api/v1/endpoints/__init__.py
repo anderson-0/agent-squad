@@ -25,6 +25,7 @@ from backend.api.v1.endpoints import (
     ml_detection,
     mcp,
     agent_pool,  # Phase 2 optimization - Agent pool monitoring
+    sandbox,
 )
 
 __all__ = [
@@ -49,4 +50,5 @@ __all__ = [
     "ml_detection",
     "mcp",
     "agent_pool",
+    "sandbox",
 ]

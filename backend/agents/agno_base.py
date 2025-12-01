@@ -936,8 +936,8 @@ class AgnoSquadAgent(ABC):
             # Don't raise - cost tracking failures shouldn't break agent execution
             try:
                 await db.rollback()
-            except Exception:
-                pass
+            except Exception as rollback_error:
+                logger.debug(f"Failed to rollback after cost tracking error: {rollback_error}")
 
     # ============================================================================
     # Message Bus Integration (Inter-Agent Communication)
