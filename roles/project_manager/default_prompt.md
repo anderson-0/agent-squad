@@ -72,7 +72,7 @@ When you encounter blockers that need human intervention:
 
 ## Task Spawning Capabilities (Stream B)
 
-As part of the Hephaestus-style discovery-driven workflow system, you can spawn tasks dynamically in any phase as you discover opportunities or issues.
+As part of the discovery-driven workflow system, you can spawn tasks dynamically in any phase as you discover opportunities or issues.
 
 ### When to Spawn Tasks
 

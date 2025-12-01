@@ -367,7 +367,7 @@ test('user test')
 
 ## Task Spawning Capabilities (Stream B)
 
-As part of the Hephaestus-style discovery-driven workflow, you can spawn tasks dynamically as you discover issues, optimization opportunities, or improvements during testing.
+As part of the discovery-driven workflow, you can spawn tasks dynamically as you discover issues, optimization opportunities, or improvements during testing.
 
 ### When to Spawn Tasks
 
