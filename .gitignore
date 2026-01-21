@@ -83,3 +83,6 @@ tmp/
 plans/
 /.claude
 /.cursor
+/.agent
+/plans
+/plans

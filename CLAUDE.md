@@ -1,141 +1,79 @@
-# Claude Code - Complete Guide
+# CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Role & Responsibilities
 
-Your role is to analyze user requirements, plan and execute tasks systematically, and ensure cohesive delivery of features that meet specifications and architectural standards.
-
-## Critical Rules
-
-**MUST FOLLOW:**
-- Before planning any implementation, always read `./README.md` first for context
-- Follow development rules in `./.claude/workflows/development-rules.md`
-- Analyze the skills catalog and activate needed skills for each task
-- For `YYMMDD` dates, use `bash -c 'date +%y%m%d'` (or PowerShell: `Get-Date -UFormat "%y%m%d"`)
-- Sacrifice grammar for concision in reports
-- List unresolved questions at the end of reports
+Your role is to analyze user requirements, delegate tasks to appropriate sub-agents, and ensure cohesive delivery of features that meet specifications and architectural standards.
 
 ## Workflows
 
-Reference these workflow files for specific protocols:
-- Primary workflow: `./.claude/workflows/primary-workflow.md`
-- Development rules: `./.claude/workflows/development-rules.md`
-- Orchestration protocols: `./.claude/workflows/orchestration-protocol.md`
-- Documentation management: `./.claude/workflows/documentation-management.md`
-- Other workflows: `./.claude/workflows/*`
+- Primary workflow: `./.claude/rules/primary-workflow.md`
+- Development rules: `./.claude/rules/development-rules.md`
+- Orchestration protocols: `./.claude/rules/orchestration-protocol.md`
+- Documentation management: `./.claude/rules/documentation-management.md`
+- And other workflows: `./.claude/rules/*`
 
----
+**IMPORTANT:** Analyze the skills catalog and activate the skills that are needed for the task during the process.
+**IMPORTANT:** You must follow strictly the development rules in `./.claude/rules/development-rules.md` file.
+**IMPORTANT:** Before you plan or proceed any implementation, always read the `./README.md` file first to get context.
+**IMPORTANT:** Sacrifice grammar for the sake of concision when writing reports.
+**IMPORTANT:** In reports, list any unresolved questions at the end, if any.
 
-## Task Management Workflow
+## Hook Response Protocol
 
-When the user gives you a task, follow this workflow:
+### Privacy Block Hook (`@@PRIVACY_PROMPT@@`)
 
-### 2. Select Plan Command
-- Ask the user which plan command to use for the task
-- Present the options:
-  ```
-  Which plan command should I use?
+When a tool call is blocked by the privacy-block hook, the output contains a JSON marker between `@@PRIVACY_PROMPT_START@@` and `@@PRIVACY_PROMPT_END@@`. **You MUST use the `AskUserQuestion` tool** to get proper user approval.
 
-  - `/plan:fast` - Quick analysis, no research (simple/familiar tasks)
-  - `/plan:hard` - Full research + analysis (complex/new tasks)
-  - `/plan:two` - Create 2 alternative approaches (when trade-offs matter)
-  - `/plan:ci` - Analyze CI/CD failures (Github Actions issues)
-  - `/plan:cro` - Conversion rate optimization plan
-  - `/plan` - Let me decide based on complexity
-  ```
-- Once the user selects a command, execute it with the user's original request
-- **Exception**: For urgent bug fixes or simple tasks, you can skip this and proceed directly
+**Required Flow:**
 
-### 3. Review Plan Output
-- The plan command creates a directory: `plans/YYYYMMDD-HHmm-plan-name/`
-- Review the generated `plan.md` (overview) and phase files
-- Each phase file contains:
-  - Requirements and architecture
-  - Implementation steps
-  - **Todo list with checkboxes** (P0/P1/P2 prioritized)
-  - Success criteria and risk assessment
-- Wait for user confirmation before proceeding to implementation
-- **Exception**: For simple tasks, proceed directly if approach is straightforward
+1. Parse the JSON from the hook output
+2. Use `AskUserQuestion` with the question data from the JSON
+3. Based on user's selection:
+   - **"Yes, approve access"** → Use `bash cat "filepath"` to read the file (bash is auto-approved)
+   - **"No, skip this file"** → Continue without accessing the file
 
-### 4. Execute and Update Progress
-- Work on the task systematically, **starting with P0 items**
-- **Update the phase file checkboxes as you complete each item**
-- Mark items as completed: `- [x] Completed task`
-- Add notes for partial completion or blockers
-- Update the `plan.md` overview status for each phase
-- This ensures progress is tracked even if the session is lost
-- **When fixing tests**: Always read the actual implementation first, then update tests to match reality (not the other way around)
-
-### 5. Completion and Cleanup
-- When all work is done, provide a summary of what was accomplished
-- Update phase statuses in `plan.md` to "Complete"
-- Ask the user:
-  - "The task is complete! May I delete the plan directory (`plans/YYYYMMDD-HHmm-plan-name/`)?"
-- If user confirms, delete the directory
-- If user wants to keep it, leave it in the `plans` folder for reference
-
----
-
-## Time Estimation Format
-
-All plans should include time estimates with three perspectives:
-
-```markdown
-## Time Estimates
-
-| Executor | Time | Notes |
-|----------|------|-------|
-| Claude | X min/hrs | Automated execution, parallel processing |
-| Senior Dev | Y hrs/days | Familiar with patterns, minimal research |
-| Junior Dev | Z hrs/days | Learning curve, requires guidance |
-
-**Complexity**: Simple / Medium / Complex
+**Example AskUserQuestion call:**
+```json
+{
+  "questions": [{
+    "question": "I need to read \".env\" which may contain sensitive data. Do you approve?",
+    "header": "File Access",
+    "options": [
+      { "label": "Yes, approve access", "description": "Allow reading .env this time" },
+      { "label": "No, skip this file", "description": "Continue without accessing this file" }
+    ],
+    "multiSelect": false
+  }]
+}
 ```
 
-**Example:**
-```markdown
-## Time Estimates
+**IMPORTANT:** Always ask the user via `AskUserQuestion` first. Never try to work around the privacy block without explicit user approval.
 
-| Executor | Time | Notes |
-|----------|------|-------|
-| Claude | 15 min | Direct file edits, no debugging needed |
-| Senior Dev | 1-2 hrs | Knows the codebase, quick implementation |
-| Junior Dev | 4-6 hrs | Needs to understand existing patterns |
+## Python Scripts (Skills)
 
-**Complexity**: Medium
-```
+When running Python scripts from `.claude/skills/`, use the venv Python interpreter:
+- **Linux/macOS:** `.claude/skills/.venv/bin/python3 scripts/xxx.py`
+- **Windows:** `.claude\skills\.venv\Scripts\python.exe scripts\xxx.py`
 
----
+This ensures packages installed by `install.sh` (google-genai, pypdf, etc.) are available.
 
-## Session Recovery Protocol
+**IMPORTANT:** When scripts of skills failed, don't stop, try to fix them directly.
 
-When starting a new session or recovering from a crash:
+## [IMPORTANT] Consider Modularization
+- If a code file exceeds 200 lines of code, consider modularizing it
+- Check existing modules before creating new
+- Analyze logical separation boundaries (functions, classes, concerns)
+- Use kebab-case naming with long descriptive names, it's fine if the file name is long because this ensures file names are self-documenting for LLM tools (Grep, Glob, Search)
+- Write descriptive code comments
+- After modularization, continue with main task
+- When not to modularize: Markdown files, plain text files, bash scripts, configuration files, environment variables files, etc.
 
-1. **Check for existing plans**: `ls plans/`
-2. **Read the plan files** to understand:
-   - Review `plan.md` for overall status
-   - Check phase files for incomplete checkboxes `- [ ]`
-   - Identify blockers or notes
-3. **Resume from where you left off** - don't restart from scratch
-4. **Inform the user** of the current state before continuing
+## Documentation Management
 
----
+We keep all important docs in `./docs` folder and keep updating them, structure like below:
 
-## File Organization
-
-### Plan Documentation
-```
-/plans/
-  └── YYYYMMDD-HHmm-plan-name/
-      ├── plan.md                    # Overview with phase status
-      ├── phase-01-*.md              # Phase with checkboxes
-      ├── phase-02-*.md
-      ├── research/                  # Research reports (if /plan:hard)
-      └── reports/                   # Scout/analysis reports
-```
-
-### Project Documentation
 ```
 ./docs
 ├── project-overview-pdr.md
@@ -147,57 +85,4 @@ When starting a new session or recovering from a crash:
 └── project-roadmap.md
 ```
 
----
-
-## Testing Best Practices
-
-### When Writing or Fixing Tests:
-1. **Always read the actual implementation first** - Don't assume how it works
-2. **Match the implementation, not your expectations** - Tests should reflect reality
-3. **Look for POJOs vs Models** - Modern code often uses plain objects instead of classes with getters/setters
-4. **Check for direct property access** - Use `object.property` not `object.getProperty()`
-5. **Verify all mocks are set up** - Missing mocks cause undefined errors
-6. **Remove obsolete tests** - If functionality was removed, delete those tests
-7. **Run tests individually first** - Fix one test at a time, verify it passes, then move to the next
-8. **Check error messages carefully** - They tell you exactly what's wrong
-
-## Code Review Best Practices
-
-When doing code reviews:
-1. **Fix compilation errors first** (P0)
-2. **Fix test failures second** (P0)
-3. **Address security issues** (P1)
-4. **Review performance concerns** (P1)
-5. **Consider code cleanup** (P2)
-
----
-
-## Important Notes
-
-- Always use plan commands (`/plan:fast`, `/plan:hard`, etc.) for new tasks
-- **Update phase checkboxes in real-time** as you complete items
-- Keep the user informed of progress
-- Maintain clear documentation in plan phase files
-- **Read before you write** - Always check actual implementation before fixing tests
-- **Prioritize critical issues** - Focus on P0 items that block deployment
-- **Provide context in phase files** - Help the next session (or user) understand what was done
-
----
-
-## CLAUDE.md Directory Documentation
-
-This project includes detailed documentation in various `CLAUDE.md` files:
-- `/CLAUDE.md` - This file (task management workflow)
-
-**Always check these files** when working in unfamiliar parts of the codebase to understand established patterns.
-
----
-
-## Communication Style
-
-- Be concise and clear
-- Provide summaries after completing major milestones
-- Use checkboxes and priority indicators in phase files for visual clarity
-- When blocked, explain the issue and suggest next steps
-- Report progress regularly, especially for long-running tasks
-- List unresolved questions at the end of reports
+**IMPORTANT:** *MUST READ* and *MUST COMPLY* all *INSTRUCTIONS* in project `./CLAUDE.md`, especially *WORKFLOWS* section is *CRITICALLY IMPORTANT*, this rule is *MANDATORY. NON-NEGOTIABLE. NO EXCEPTIONS. MUST REMEMBER AT ALL TIMES!!!*

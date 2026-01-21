@@ -42,7 +42,13 @@ from backend.models import (
 config = context.config
 
 # Override sqlalchemy.url with our DATABASE_URL from settings
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+# Convert async URL to sync for Alembic migrations (asyncpg -> psycopg2)
+sync_database_url = settings.DATABASE_URL.replace(
+    "postgresql+asyncpg://", "postgresql://"
+).replace(
+    "postgresql+aiosqlite://", "sqlite://"
+)
+config.set_main_option("sqlalchemy.url", sync_database_url)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
