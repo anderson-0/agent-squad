@@ -81,3 +81,5 @@ logs/
 temp/
 tmp/
 plans/
+/.claude
+/.cursor
